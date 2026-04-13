@@ -112,11 +112,11 @@ percentages = (counts / len(y)) * 100
 
 print("\n--- Distribution Validation ---")
 for category, pct in percentages.items():
-    status = "✅ OK"
+    status = "[OK]"
     if pct > 50:
-        status = "❌ TOO HIGH (>50%)"
+        status = "[TOO HIGH (>50%)]"
     elif pct < 5:
-        status = "⚠️ LOW (<5%)"
+        status = "[LOW (<5%)]"
     
     print(f"{category}: {pct:.2f}% {status}")
 
@@ -130,6 +130,10 @@ else:
 # Geometric Validation: Verify magnitudes are ≈ 1
 magnitudes = np.linalg.norm(X, axis=1)
 is_normalized = np.allclose(magnitudes, 1.0, atol=1e-3)
+
+# Geometric MSE (How far from unit length are we on average?)
+geometric_mse = np.mean((magnitudes - 1.0)**2)
+print(f"Geometric MSE: {geometric_mse:.10f}")
 
 print("-" * 30)
 print(f"Matrix X Shape: {X.shape}")
@@ -148,3 +152,7 @@ print(f"Stored y Shape: {loaded['y'].shape}")
 # This compares the file on disk to the data in your memory
 matches = np.allclose(loaded['X'], X)
 print(f"Does the saved file match the memory? {matches}")
+
+# Integrity MSE (Did saving/loading change any values?)
+integrity_mse = np.mean((loaded['X'] - X)**2)
+print(f"File Integrity MSE: {integrity_mse:.10f}")
