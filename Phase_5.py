@@ -17,7 +17,7 @@ def run_phase_5_evaluation():
     print("--- Phase 5: Deep Evaluation Metrics ---")
     
     # 1. Load Data
-    input_file = 'spider_reduced_embeddings.npz'
+    input_file = 'spider_final_embeddings.npz'
     data = np.load(input_file)
     X_full = data['X']
     y = data['y']
@@ -95,6 +95,25 @@ def run_phase_5_evaluation():
     plt.tight_layout()
     plt.savefig('phase5_metric_comparison.png', dpi=300)
     print("- Metric Comparison plot saved as 'phase5_metric_comparison.png'")
+
+    # === QUERY ROUTING LAYER PoC ===
+    from sentence_transformers import SentenceTransformer
+    print("\n--- Initializing Routing Layer Components ---")
+    routing_model = SentenceTransformer('BAAI/bge-small-en-v1.5')
+
+    # Example test queries
+    sample_queries = [
+        "List all stars", 
+        "Calculate total revenue per department for employees over 30"
+    ]
+    
+    print("\n[PoC Result] Testing routing logic:")
+    for q in sample_queries:
+        vec = routing_model.encode([q], normalize_embeddings=True)
+        low_dim_vec = pca.transform(vec)
+        prediction = clf.predict(low_dim_vec)[0]
+        target = "FAST MODEL" if prediction in ["Easy", "Medium"] else "POWERFUL MODEL"
+        print(f"Query: '{q}'\nDecision: {prediction} -> Send to {target}\n")
 
     print("\nPhase 5 Conclusion:")
     print("Look at the Confusion Matrix to see where the model 'mixes up' categories.")
