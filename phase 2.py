@@ -44,3 +44,32 @@ def run_phase_2():
 
 if __name__ == "__main__":
     run_phase_2()
+# 1. Calculate Reconstruction Error (The missing metric from your research objective)
+from sklearn.decomposition import PCA
+import numpy as np
+
+# Load your 384D embeddings
+data = np.load('spider_final_embeddings.npz')
+X = data['X']
+
+# Define components to test (e.g., matching your sensitivity analysis)
+n_comp = 50 
+
+# Perform PCA
+pca = PCA(n_components=n_comp)
+X_reduced = pca.fit_transform(X)
+
+# Map back to 384-dimensional space
+X_reconstructed = pca.inverse_transform(X_reduced)
+
+# Calculate Mean Squared Error (Signal Loss)
+reconstruction_error = np.mean((X - X_reconstructed) ** 2)
+
+print(f"--- Reconstruction Error Analysis ---")
+print(f"Original Dimensions: {X.shape[1]}")
+print(f"Reduced Dimensions:  {n_comp}")
+print(f"Reconstruction MSE:  {reconstruction_error:.10f}")
+
+# 2. Percentage of Information Retained
+variance_retained = np.sum(pca.explained_variance_ratio_) * 100
+print(f"Information Retained: {variance_retained:.2f}%")
