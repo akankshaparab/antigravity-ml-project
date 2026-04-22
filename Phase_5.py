@@ -28,13 +28,15 @@ def run_phase_5_evaluation():
     )
 
     # 2. Train the Optimized Model
-    n_comp = 50
-    pca = PCA(n_components=n_comp).fit(X_train_full)
+    # Retain 90% variance to capture structural complexity
+    pca = PCA(n_components=0.90).fit(X_train_full)
     X_train = pca.transform(X_train_full)
     X_test = pca.transform(X_test_full)
 
-    print(f"[Step 1] Training Optimized SVM (PCA={n_comp}, Kernel=RBF)...")
-    clf = SVC(kernel='rbf', probability=True)
+    n_actual = pca.n_components_
+    print(f"[Step 1] Training Optimized SVM (PCA={n_actual} for 90% Var, Kernel=RBF)...")
+    # Added class_weight='balanced' to handle 'Extra Hard' minority class
+    clf = SVC(kernel='rbf', probability=True, class_weight='balanced')
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
 
