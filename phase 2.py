@@ -53,7 +53,7 @@ data = np.load('spider_final_embeddings.npz')
 X = data['X']
 
 # Define components to test (e.g., matching your sensitivity analysis)
-n_comp = 50 
+n_comp = 243
 
 # Perform PCA
 pca = PCA(n_components=n_comp)
