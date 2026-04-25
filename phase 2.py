@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, IncrementalPCA, KernelPCA, SparsePCA
 import os
 import time
 
@@ -11,65 +11,75 @@ def run_phase_2():
         print(f"Error: {input_file} not found. Please run Phase 1 first.")
         return
 
-    print("--- Phase 2: Dimensionality Reduction ---")
+    print("--- Phase 2: Dimensionality Reduction Comparison ---")
     
     # 1. Load Data
     print(f"Loading dense embeddings from {input_file}...")
     data = np.load(input_file)
     X = data['X']  # 384-dimensional embeddings
     y = data['y']  # Labels
-    
     print(f"Original X shape: {X.shape}")
 
-    # 2. Fit PCA dynamically to retain 95% of information variant 
-    print("\nFitting PCA to retain 95% of the total variance...")
+    # --- TECHNIQUE 1: STANDARD PCA ---
+    print("\n[1] Running Standard PCA (95% variance)...")
     start = time.time()
-    
-    # Passing a float (0.0 < n_components < 1.0) automatically selects 
-    # the number of components necessary to capture that much variance ratio.
     pca = PCA(n_components=0.95, random_state=42)
-    X_reduced = pca.fit_transform(X)
+    X_pca = pca.fit_transform(X)
+    duration = time.time() - start
+    n_comp = X_pca.shape[1]
     
+    X_recon_pca = pca.inverse_transform(X_pca)
+    mse_pca = np.mean((X - X_recon_pca) ** 2)
+    var_pca = np.sum(pca.explained_variance_ratio_) * 100
+    
+    print(f"Time: {duration:.4f}s | Components: {n_comp} | MSE: {mse_pca:.10f} | Variance: {var_pca:.2f}%")
+
+    # --- TECHNIQUE 2: INCREMENTAL PCA ---
+    # Useful for datasets that don't fit in memory (processed in batches)
+    print(f"\n[2] Running Incremental PCA (using {n_comp} components)...")
+    start = time.time()
+    ipca = IncrementalPCA(n_components=n_comp, batch_size=500)
+    X_ipca = ipca.fit_transform(X)
     duration = time.time() - start
     
-    # 3. Present Results
-    print(f"PCA completed in {duration:.4f} seconds.")
-    print(f"New X shape: {X_reduced.shape}")
-    print(f"Dimensions compressed from {X.shape[1]} down to {X_reduced.shape[1]}")
+    X_recon_ipca = ipca.inverse_transform(X_ipca)
+    mse_ipca = np.mean((X - X_recon_ipca) ** 2)
+    var_ipca = np.sum(ipca.explained_variance_ratio_) * 100
     
-    # 4. Save Reduced Dataset
-    print(f"\nSaving transformed embeddings to {output_file}...")
-    np.savez_compressed(output_file, X=X_reduced, y=y)
-    print("Process Complete. Ready for Phase 3!")
+    print(f"Time: {duration:.4f}s | MSE: {mse_ipca:.10f} | Variance: {var_ipca:.2f}%")
+
+    # --- TECHNIQUE 3: KERNEL PCA ---
+    # Good for non-linear dimensionality reduction (using RBF kernel)
+    print(f"\n[3] Running Kernel PCA (RBF kernel, {n_comp} components)...")
+    print("Note: This can be computationally expensive...")
+    start = time.time()
+    # fit_inverse_transform=True allows us to calculate reconstruction error
+    kpca = KernelPCA(n_components=n_comp, kernel='rbf', fit_inverse_transform=True, n_jobs=-1, random_state=42)
+    X_kpca = kpca.fit_transform(X)
+    duration = time.time() - start
+    
+    X_recon_kpca = kpca.inverse_transform(X_kpca)
+    mse_kpca = np.mean((X - X_recon_kpca) ** 2)
+    print(f"Time: {duration:.4f}s | MSE: {mse_kpca:.10f}")
+
+    # --- TECHNIQUE 4: SPARSE PCA ---
+    # Finds components that are sparse combinations of original features
+    print(f"\n[4] Running Sparse PCA ({n_comp} components)...")
+    print("Note: This might take a while for high dimensions...")
+    start = time.time()
+    spca = SparsePCA(n_components=n_comp, alpha=1, random_state=42, n_jobs=-1)
+    X_spca = spca.fit_transform(X)
+    duration = time.time() - start
+    
+    # Reconstruction for SparsePCA: X_reconstructed = X_transformed * components_
+    X_recon_spca = np.dot(X_spca, spca.components_)
+    mse_spca = np.mean((X - X_recon_spca) ** 2)
+    print(f"Time: {duration:.4f}s | MSE: {mse_spca:.10f}")
+
+    # 4. Save the best/standard result for downstream phases
+    print(f"\nSaving transformed embeddings (Standard PCA) to {output_file}...")
+    np.savez_compressed(output_file, X=X_pca, y=y)
+    print("Phase 2 complete! Use 'spider_reduced_embeddings.npz' for clustering in Phase 3.")
 
 if __name__ == "__main__":
     run_phase_2()
-# 1. Calculate Reconstruction Error (The missing metric from your research objective)
-from sklearn.decomposition import PCA
-import numpy as np
-
-# Load your 384D embeddings
-data = np.load('spider_final_embeddings.npz')
-X = data['X']
-
-# Define components to test (e.g., matching your sensitivity analysis)
-n_comp = 243
-
-# Perform PCA
-pca = PCA(n_components=n_comp)
-X_reduced = pca.fit_transform(X)
-
-# Map back to 384-dimensional space
-X_reconstructed = pca.inverse_transform(X_reduced)
-
-# Calculate Mean Squared Error (Signal Loss)
-reconstruction_error = np.mean((X - X_reconstructed) ** 2)
-
-print(f"--- Reconstruction Error Analysis ---")
-print(f"Original Dimensions: {X.shape[1]}")
-print(f"Reduced Dimensions:  {n_comp}")
-print(f"Reconstruction MSE:  {reconstruction_error:.10f}")
-
-# 2. Percentage of Information Retained
-variance_retained = np.sum(pca.explained_variance_ratio_) * 100
-print(f"Information Retained: {variance_retained:.2f}%")
