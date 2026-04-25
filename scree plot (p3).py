@@ -14,7 +14,7 @@ def run_scree_analysis():
     Loads original dense embeddings and generates a high-fidelity Scree Plot 
     to visualize explained variance and justify dimension reduction.
     """
-    input_file = 'spider_reduced_embeddings.npz'
+    input_file = 'spider_final_embeddings.npz'
     
     if not os.path.exists(input_file):
         print(f"Error: '{input_file}' not found. Ensure Phase 1 is complete.")
