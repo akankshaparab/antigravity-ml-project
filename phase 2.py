@@ -28,6 +28,9 @@ def run_phase_2():
     duration = time.time() - start
     n_comp = X_pca.shape[1]
     
+    intrinsic_dim = X_pca.shape[1]
+    print(f"Intrinsic Dimensionality: {intrinsic_dim}")
+    
     X_recon_pca = pca.inverse_transform(X_pca)
     mse_pca = np.mean((X - X_recon_pca) ** 2)
     var_pca = np.sum(pca.explained_variance_ratio_) * 100
