@@ -45,6 +45,29 @@ def run_phase_4_optimization():
         kernel_results[kernel] = acc
         print(f"  - {kernel.upper()} Kernel Accuracy: {acc:.4f} (Time: {duration:.2f}s)")
 
+    # --- TASK 2.5: Visualization: Kernel Comparison Bar Chart ---
+    plt.figure(figsize=(10, 6))
+    kernel_names = [k.upper() for k in kernel_results.keys()]
+    accuracies = list(kernel_results.values())
+    
+    # Create bar plot with a premium color palette
+    sns.barplot(x=kernel_names, y=accuracies, palette='magma', hue=kernel_names, legend=False)
+    
+    # Styling and Labels
+    plt.title('Comparison of SVM Kernel Accuracies (50 Components)', fontsize=15, fontweight='bold', pad=20)
+    plt.xlabel('Kernel Function Type', fontsize=12)
+    plt.ylabel('Accuracy Score', fontsize=12)
+    plt.ylim(0, 1.1)  # Leave space for labels
+    
+    # Add accuracy values on top of the bars
+    for i, acc in enumerate(accuracies):
+        plt.text(i, acc + 0.02, f'{acc:.4f}', ha='center', va='bottom', fontweight='bold', color='black')
+
+    plt.grid(axis='y', linestyle='--', alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('phase4_kernel_comparison.png', dpi=300)
+    print("\n[SUCCESS] Kernel comparison plot saved as 'phase4_kernel_comparison.png'")
+
     # --- TASK 3: Sensitivity Analysis ---
     print("\n[Step 3] Performing Sensitivity Analysis (Varying Dimensions)...")
     dimensions = [5, 10, 20, 30, 50, 75, 100, 150]
