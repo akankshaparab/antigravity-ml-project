@@ -72,7 +72,7 @@ def run_phase_2():
     duration = time.time() - start
     
     # Reconstruction for SparsePCA: X_reconstructed = X_transformed * components_
-    X_recon_spca = np.dot(X_spca, spca.components_)
+    X_recon_spca = np.dot(X_spca, spca.components_) + X.mean(axis=0)
     mse_spca = np.mean((X - X_recon_spca) ** 2)
     print(f"Time: {duration:.4f}s | MSE: {mse_spca:.10f}")
 
