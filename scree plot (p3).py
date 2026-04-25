@@ -31,7 +31,7 @@ def run_scree_analysis():
     
     # Fit PCA to capture the most significant variance
     # Using 100 components is usually enough to see the 'elbow'
-    n_components = min(100, X.shape[1])
+    n_components = X.shape[1]
     print(f"Analyzing variance across top {n_components} components...")
     
     pca = PCA(n_components=n_components)
@@ -83,7 +83,7 @@ def run_scree_analysis():
     plt.tight_layout()
     
     # Save the plot
-    output_filename = 'phase3_scree_plot.png'
+    output_filename = 'phase3_scree_plot_final.png'
     plt.savefig(output_filename, dpi=300)
     print(f"\n[SUCCESS] Scree plot visualization saved to: {output_filename}")
     
