@@ -1,7 +1,14 @@
 import numpy as np
 from sklearn.decomposition import PCA, IncrementalPCA, KernelPCA, SparsePCA
+import matplotlib.pyplot as plt
+import seaborn as sns
 import os
 import time
+
+# --- Visualization Styling ---
+sns.set_theme(style="whitegrid")
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = ['Inter', 'Roboto', 'Arial', 'DejaVu Sans']
 
 def run_phase_2():
     input_file = 'spider_final_embeddings.npz'
@@ -36,6 +43,38 @@ def run_phase_2():
     var_pca = np.sum(pca.explained_variance_ratio_) * 100
     
     print(f"Time: {duration:.4f}s | Components: {n_comp} | MSE: {mse_pca:.10f} | Variance: {var_pca:.2f}%")
+
+    # --- VISUALIZATION: CUMULATIVE VARIANCE ---
+    print("\nGenerating Variance Analysis Plot...")
+    # We fit a full PCA to see the elbow curve
+    full_pca = PCA().fit(X)
+    cum_var = np.cumsum(full_pca.explained_variance_ratio_)
+    
+    plt.figure(figsize=(12, 6), dpi=100)
+    
+    # Plot the curve
+    plt.plot(range(1, len(cum_var) + 1), cum_var, color='#4f46e5', lw=3, label='Cumulative Variance')
+    
+    # Markers for target threshold (95%) and intrinsic dimensionality
+    plt.axhline(y=0.95, color='#ef4444', linestyle='--', alpha=0.8, label='95% Information Threshold')
+    plt.axvline(x=intrinsic_dim, color='#10b981', linestyle=':', alpha=0.8, label=f'Intrinsic Dim ({intrinsic_dim})')
+    
+    # Highlight the captured region
+    plt.fill_between(range(1, intrinsic_dim + 1), 0, cum_var[:intrinsic_dim], color='#4f46e5', alpha=0.1)
+
+    # Styling and Labels
+    plt.title('Subspace Projection: Cumulative Explained Variance', fontsize=16, pad=20, weight='bold')
+    plt.xlabel('Principal Component Index', fontsize=12, labelpad=10)
+    plt.ylabel('Cumulative Variance Ratio', fontsize=12, labelpad=10)
+    plt.xlim(0, 200) # Focusing on the most significant components
+    plt.ylim(0, 1.05)
+    plt.legend(loc='lower right', frameon=True, shadow=True)
+    plt.grid(True, linestyle='--', alpha=0.5)
+    
+    plt.tight_layout()
+    plot_path = 'variance_analysis_plot.png'
+    plt.savefig(plot_path, dpi=300)
+    print(f"Variance analysis plot saved to: {plot_path}")
 
     # --- TECHNIQUE 2: INCREMENTAL PCA ---
     # Useful for datasets that don't fit in memory (processed in batches)
