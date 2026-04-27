@@ -71,6 +71,7 @@ def run_phase_5_evaluation():
     x = np.arange(len(labels))
     ax.bar(x - 0.2, [report[c]['precision'] for c in labels], 0.2, label='Precision', color='#10b981')
     ax.bar(x, [report[c]['recall'] for c in labels], 0.2, label='Recall', color='#6366f1')
+    ax.bar(x + 0.2, [report[c]['f1-score'] for c in labels], 0.2, label='F1-Score', color='#f59e0b')
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.legend()
