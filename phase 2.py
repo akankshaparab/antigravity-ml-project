@@ -66,7 +66,7 @@ def run_phase_2():
     plt.title('Subspace Projection: Cumulative Explained Variance', fontsize=16, pad=20, weight='bold')
     plt.xlabel('Principal Component Index', fontsize=12, labelpad=10)
     plt.ylabel('Cumulative Variance Ratio', fontsize=12, labelpad=10)
-    plt.xlim(0, 200) # Focusing on the most significant components
+    plt.xlim(0, max(intrinsic_dim + 50, 250)) # Ensuring the intrinsic dimensionality is well within view
     plt.ylim(0, 1.05)
     plt.legend(loc='lower right', frameon=True, shadow=True)
     plt.grid(True, linestyle='--', alpha=0.5)
