@@ -56,6 +56,8 @@ def run_phase_5_evaluation():
     sns.heatmap(cm_norm, annot=cm, fmt='d', cmap='Blues', 
                 xticklabels=labels, yticklabels=labels)
     plt.title("Confusion Matrix: Difficulty Classification", fontsize=15, fontweight='bold', pad=20)
+    plt.xlabel("Predicted Label", fontsize=12, fontweight='bold')
+    plt.ylabel("True Label", fontsize=12, fontweight='bold')
     plt.savefig('phase5_confusion_matrix.png', dpi=300)
     print("- Confusion Matrix saved.")
 
