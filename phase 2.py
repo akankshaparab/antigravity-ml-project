@@ -50,12 +50,22 @@ def run_phase_2():
     full_pca = PCA().fit(X)
     cum_var = np.cumsum(full_pca.explained_variance_ratio_)
     
+    # Identify specific thresholds
+    n_90 = np.argmax(cum_var >= 0.90) + 1
+    n_95 = np.argmax(cum_var >= 0.95) + 1
+    
+    print(f"Dimensions needed for 90% variance: {n_90}")
+    print(f"Dimensions needed for 95% variance: {n_95}")
+    
     plt.figure(figsize=(12, 6), dpi=100)
     
     # Plot the curve
     plt.plot(range(1, len(cum_var) + 1), cum_var, color='#4f46e5', lw=3, label='Cumulative Variance')
     
-    # Markers for target threshold (95%) and intrinsic dimensionality
+    # Markers for target thresholds and intrinsic dimensionality
+    plt.axhline(y=0.90, color='#f59e0b', linestyle='--', alpha=0.8, label='90% Information Threshold')
+    plt.axvline(x=n_90, color='#f59e0b', linestyle=':', alpha=0.8, label=f'90% Dim ({n_90})')
+    
     plt.axhline(y=0.95, color='#ef4444', linestyle='--', alpha=0.8, label='95% Information Threshold')
     plt.axvline(x=intrinsic_dim, color='#10b981', linestyle=':', alpha=0.8, label=f'Intrinsic Dim ({intrinsic_dim})')
     

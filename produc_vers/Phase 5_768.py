@@ -1,21 +1,13 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
-from sklearn.decomposition import PCA
-from sklearn.metrics import confusion_matrix, classification_report, f1_score
 import pandas as pd
+from sklearn.svm import SVC
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, f1_score
 from sentence_transformers import SentenceTransformer
 
-# --- Configuration & Styling ---
-sns.set_theme(style="white")
-plt.rcParams['font.family'] = 'sans-serif'
-
 def run_phase_5_evaluation():
-    print("--- Phase 5: Deep Evaluation Metrics (768 Dimensions) ---")
-    
-    # 1. Load Data (Using 768D)
+    # 1. Load Data
     input_file = 'spider_768_embeddings.npz'
     print(f"Loading embeddings from {input_file}...")
     data = np.load(input_file)
@@ -32,7 +24,7 @@ def run_phase_5_evaluation():
     X_train = pca.transform(X_train_full)
     X_test = pca.transform(X_test_full)
 
-    print(f"[Step 1] Training Optimized SVM (PCA={pca.n_components_} for 90% Var)...")
+    print(f"[Step 1] Training Optimized SVM (PCA={pca.n_components_} components for 90% Var)...")
     clf = SVC(kernel='rbf', probability=True, class_weight='balanced')
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
@@ -42,6 +34,10 @@ def run_phase_5_evaluation():
     report = classification_report(y_test, y_pred, output_dict=True)
     df_report = pd.DataFrame(report).transpose()
     print(df_report.iloc[:-3].round(4))
+
+    # --- THE F1 SCORE SECTION ---
+    overall_f1 = f1_score(y_test, y_pred, average='weighted')
+    print(f"\nFinal Weighted F1-Score: {overall_f1:.4f}")
 
     # 4. === QUERY ROUTING LAYER PoC ===
     print("\n--- Testing Routing Layer (768D Model) ---")
