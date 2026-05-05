@@ -15,14 +15,22 @@ X_2d = pca.fit_transform(X)
 
 # 3. Create the Visualization
 plt.figure(figsize=(12, 8))
-colors = {'easy': '#4CAF50', 'medium': '#FFC107', 'hard': '#FF9800', 'extra': '#F44336'}
-labels = {'easy': 'Easy', 'medium': 'Medium', 'hard': 'Hard', 'extra': 'Extra Hard'}
+# Mapping dataset labels to our display configuration
+config = {
+    'Easy': {'color': '#4CAF50', 'label': 'Easy'},
+    'Medium': {'color': '#FFC107', 'label': 'Medium'},
+    'Hard': {'color': '#FF9800', 'label': 'Hard'},
+    'Extra Hard': {'color': '#F44336', 'label': 'Extra Hard'}
+}
 
-for diff in ['easy', 'medium', 'hard', 'extra']:
-    mask = (y == diff)
-    plt.scatter(X_2d[mask, 0], X_2d[mask, 1], label=labels[diff], alpha=0.6, s=15)
+for diff_label, settings in config.items():
+    mask = (y == diff_label)
+    plt.scatter(X_2d[mask, 0], X_2d[mask, 1], 
+                label=settings['label'], 
+                color=settings['color'],
+                alpha=0.6, s=15)
 
-plt.title('768D Embedding Space: Class Distribution & Blind Spots')
+plt.title('768D Embedding Space: Class Distribution & Blind Spots', fontsize=15, weight='bold')
 plt.xlabel('PCA Component 1')
 plt.ylabel('PCA Component 2')
 plt.legend()
