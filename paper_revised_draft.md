@@ -46,7 +46,10 @@ The distribution of query difficulty (post-rebalancing) is as follows:
 ## 4 Methodology
 ### 4.1 Dimensionality Reduction & Selection
 - **Benchmarking Methodology**: We evaluated four PCA variants (Standard, Incremental, Sparse, Kernel) to identify the most efficient method for production scaling. The `benchmark_pca()` function used a timing mechanism (`time.time()`) to record the duration before and after the `fit_transform()` operation, identifying Standard PCA as the optimal balance between speed and variance retention.
-- **Component Rationale**: For the purpose of comparing these variants, we standardized the analysis at **50 components**. This number was chosen as a representative baseline where the "elbow" of the variance curve typically begins, allowing for a fair comparison of computational overhead across methods.
+- **Component Rationale**: We standardized the initial analysis at **50 components** for three primary reasons:
+    - **Benchmarking Efficiency**: It provided a manageable baseline for comparing the computational overhead of the four PCA variants.
+    - **Operational Speed**: Lower dimensionality is critical for the real-time throughput of the SVM in a production query routing layer.
+    - **Information Density**: Initial scree plot analysis suggested a primary elbow point at 50, where the "vast majority" of the semantic meaning was captured, despite a lower total variance explained (~62.5%).
 - **Scree Plot Insights**: The scree plot was utilized to answer how variance is distributed across dimensions within the reduced space, helping to define the threshold where marginal gains in signal diminish.
 - *[Image: pca_variant_comparison.png]*
 
@@ -70,16 +73,35 @@ Performance was evaluated using several statistical indicators:
 - **Heatmap Insights**: The generated similarity heatmap showed distinct diagonal blocks, indicating high intra-class similarity. Notably, the "Extra Hard" block appeared the most isolated, confirming it as a distinct semantic neighborhood. The heatmap also revealed that while difficulty drives separation, secondary clustering often occurs based on thematic/theme similarity.
 
 ## 6 Results and Discussion
-### 6.1 Benchmark Results
-#### 6.1.1 Evaluation Workflow
-The final evaluation followed a rigorous pipeline:
-1.  **Data Partitioning**: An 80:20 stratified train-test split was used to maintain the proportional representation of all four difficulty levels.
-2.  **Compression**: The dimensions were reduced to the optimal **50-component** threshold identified in the elbow analysis.
-3.  **Training**: An RBF-SVM was trained on this 50D space using `class_weight='balanced'`.
-4.  **Prediction and Confidence**: The model made predictions on the unseen test set, which were compared against true labels to measure performance and calculate confidence scores.
+### 6.1 Benchmark Results and Evolution
 
-#### 6.1.2 Classification Performance
-The optimized model resolved the semantic gap for 'Hard' queries (80% precision) and stabilized 'Extra Hard' classification. The tabulated results provide a structured numerical summary of the model's strengths across different complexity tiers.
+#### 6.1.1 Initial Baseline Performance (Standardized at 50 Components)
+The first iteration of the classification layer utilized the 50-component subspace. While efficient, this configuration revealed critical limitations in handling high-complexity queries.
+
+- **Statistical Imbalance**: The model initially applied equal weighting to all classes. Given the skewed distribution of the dataset (dominated by "Medium" and "Hard"), the minority "Extra Hard" class was poorly learned.
+- **Information Loss in the "Tail"**: At 50 components, only ~62.5% of the total variance was preserved. Analysis revealed that complex SQL keywords are often encoded in the "tail" of the embedding variance; by truncating at 50, these logical cues were discarded in favor of general semantic themes.
+- **Evaluation Visuals (Initial Phase)**:
+    - ![Baseline Confusion Matrix](pre_vers_confu_matr.png)
+    - **Observation**: The model struggled significantly with "Extra Hard" queries (only 43/132 correct). There was a noticeable "pull" toward the Medium class, indicating a systemic bias toward predicting the majority categories.
+    - ![Baseline Metric Comparison](pre_vers_metric_comp.png)
+    - **Observation**: Performance was highly uneven. While the model achieved a respectable 80% precision for "Hard" queries, it hit a performance floor of **32% recall** for "Extra Hard" types.
+- **Conclusion**: Raw embeddings and aggressive compression were insufficient for production. The near-random performance on complex queries confirmed that class imbalance and information loss must be addressed simultaneously.
+
+#### 6.1.2 Optimization Phase: Increasing Manifold Fidelity
+To bridge the gap between English phrasing and SQL complexity, two primary changes were implemented:
+1. **Expansion of Dimensionality**: The subspace was expanded from 50 to **179 components**, increasing variance retention from 62.5% to **90%**. This preserved the subtle linguistic cues necessary for logical mapping.
+2. **Balanced Class Weighting**: Custom weights were introduced to the SVM to ensure the minority "Extra Hard" class was absorbed with higher sensitivity.
+
+#### 6.1.3 Final Production Evaluation (Optimized State)
+The optimized model was re-evaluated against the 179D manifold.
+
+- **Evaluation Visuals (Production Phase)**:
+    - ![Production Confusion Matrix](phase5_confusion_matrix.png)
+    - **Observation**: The classifier achieved strong diagonal performance across all four classes. The most notable remaining confusion was a minor overlap between "Medium" and "Easy," suggesting a high semantic similarity between adjacent complexity levels.
+    - **Success with Complexity**: Accuracy on "Extra Hard" queries jumped to **98/132**, validating that the model successfully learned structural differences.
+    - ![Production Metric Comparison](phase5_metric_comparison.png)
+    - **Observation**: The "short bars" of the baseline were replaced by strong, uniform precision and recall across the board.
+- **Conclusion**: By capturing the variance "tail" and balancing the classifier's sensitivity, the system became viable for production-grade routing.
 
 
 
@@ -94,7 +116,7 @@ The optimized model resolved the semantic gap for 'Hard' queries (80% precision)
 - **Infrastructure ROI**: Achieved a **70.7% reduction in RAM-resident index size** on Pinecone, significantly lowering retrieval latency and monthly overhead.
 
 #### 6.3.2 Identifying the Semantic Gap
-Discusses how models encode linguistic meaning rather than database logic, requiring the weighted SVM to bridge the gap for "Extra Hard" queries.
+Analysis of the misclassifications reveals that the core challenge lies in the model's sensitivity: it is naturally more attuned to **semantic themes** (the subject of the query) than to **keyword complexity** (the structure of the query). When aggressive PCA compression is applied, the structural logic is the first to be discarded as "noise." By expanding to 179 components and applying balanced weights, we successfully bridged the gap between the natural language meaning and the underlying SQL logical structure.
 
 ## 7 Conclusion
 A range of 50–80 PCA components is sufficient for representing Text-to-SQL complexity. The resulting SVM provides a principled foundation for automated enterprise query routing.
