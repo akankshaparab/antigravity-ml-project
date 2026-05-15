@@ -32,6 +32,8 @@ The distribution of query difficulty (post-rebalancing) is as follows:
 - **Extra Hard**: 661
 
 ### 3.3 EDA and Preprocessing
+- **Data Matrix Formatting**: The dataset was prepared in standard machine learning format: a feature matrix $X$ (embeddings) and a label vector $y$ (difficulty classes). Matrix $X$ is used for training and testing, while $y$ serves as the ground truth for prediction.
+- **Geometric Retrieval Theory**: By setting `normalize_embeddings=True` during the embedding process, we constrained vectors to a constant magnitude (unit length). Since vectors consist of both magnitude and direction, this normalization allows the model to prioritize **directional similarity**. Vectors pointing in the same direction indicate a similar difficulty level, providing a more robust metric than distance alone in high-dimensional space.
 - **Difficulty Classifier Logic**: Implemented a point-based scoring system to quantify complexity:
     - **+1 Point**: `JOIN`, `GROUP BY`, `ORDER BY`, `HAVING`.
     - **+2 Points**: `INTERSECT`, `UNION`, `EXCEPT`.
@@ -39,13 +41,14 @@ The distribution of query difficulty (post-rebalancing) is as follows:
 - **Heuristic Rebalancing**: 
     - *Initial Model*: Scores of 1-2 were labeled as "Medium," leading to over-saturation of the class. 
     - *Optimized Model*: 0=Easy, 1=Medium, 2-3=Hard, and **>3=Extra Hard**. This shift corrected the bias where "Medium was catching too much" and "Extra Hard was catching too little."
-- **Geometric Validation**: Vectors were normalized to unit length and verified using **Geometric Mean Squared Error (MSE)** to ensure directional consistency for the SVM decision boundaries.
+- **Geometric Validation**: Vectors were normalized to unit length and verified using **Geometric Mean Squared Error (MSE)**. For visualization purposes, string labels were converted to a numerical format (`Easy: 0` to `Extra Hard: 3`) to facilitate consistent color coding across projections.
 
 ## 4 Methodology
 ### 4.1 Dimensionality Reduction & Selection
-We compared 4 PCA variants. Incremental PCA was prioritized for its RAM efficiency during production upserts.
+- **Benchmarking Methodology**: We evaluated four PCA variants (Standard, Incremental, Sparse, Kernel) to identify the most efficient method for production scaling. The `benchmark_pca()` function used a timing mechanism (`time.time()`) to record the duration before and after the `fit_transform()` operation, identifying Standard PCA as the optimal balance between speed and variance retention.
+- **Component Rationale**: For the purpose of comparing these variants, we standardized the analysis at **50 components**. This number was chosen as a representative baseline where the "elbow" of the variance curve typically begins, allowing for a fair comparison of computational overhead across methods.
+- **Scree Plot Insights**: The scree plot was utilized to answer how variance is distributed across dimensions within the reduced space, helping to define the threshold where marginal gains in signal diminish.
 - *[Image: pca_variant_comparison.png]*
-- **Finding**: Approximately 80 dimensions were found to contribute 95% of the variance in the 384D baseline space.
 
 ### 4.2 Query Complexity Classification
 - **Kernel Comparison**: Parallel comparison of RBF, Linear, and Poly kernels. The **RBF kernel** was selected as the winner for its superior ability to resolve linguistic overlap.
@@ -57,18 +60,28 @@ We compared 4 PCA variants. Incremental PCA was prioritized for its RAM efficien
 - **Data Split**: 80:20 train-test ratio using `stratify=y` to maintain the difficulty proportions across sets.
 
 ### 5.2 Hyperparameter Settings
-- **Elbow Point Identification**: Determined the threshold where marginal returns on accuracy diminish.
+- **Identification of the Elbow Zone**: Through sensitivity analysis, we identified that the optimal performance-to-cost ratio occurs in an **"Elbow Zone" between 30 and 50 dimensions**. Beyond this point, gains in accuracy, precision, and recall were found to plateau.
 - *[Image Placeholder: SVM Performance vs Number of PCA Components]*
 
 ### 5.3 Evaluation Metrics
-Defined by **Precision, Recall, F1-Score**, and **Silhouette Score**. Special focus was placed on the transformation of Extra Hard recall from a floor of 32.58% to its production state.
+Performance was evaluated using several statistical indicators:
+- **Weighted Metrics**: We calculated weighted averages for **Accuracy, Precision, and Recall**. This weighting is essential as it accounts for the relative size (support) of each difficulty set, ensuring that the dominant "Easy/Medium" classes do not overshadow the "Extra Hard" minority.
+- **Silhouette Score**: This metric was used to measure cluster cohesion. A positive silhouette score indicated that queries of the same type form coherent geometric clusters, validating the semantic separation of the difficulty labels.
+- **Heatmap Insights**: The generated similarity heatmap showed distinct diagonal blocks, indicating high intra-class similarity. Notably, the "Extra Hard" block appeared the most isolated, confirming it as a distinct semantic neighborhood. The heatmap also revealed that while difficulty drives separation, secondary clustering often occurs based on thematic/theme similarity.
 
 ## 6 Results and Discussion
 ### 6.1 Benchmark Results
-#### 6.1.1 Intrinsic Dimensionality Analysis
-Confirmed that the 768D manifold could be reduced to ~220 components (for production) or ~80 components (for baseline) while preserving necessary signal.
+#### 6.1.1 Evaluation Workflow
+The final evaluation followed a rigorous pipeline:
+1.  **Data Partitioning**: An 80:20 stratified train-test split was used to maintain the proportional representation of all four difficulty levels.
+2.  **Compression**: The dimensions were reduced to the optimal **50-component** threshold identified in the elbow analysis.
+3.  **Training**: An RBF-SVM was trained on this 50D space using `class_weight='balanced'`.
+4.  **Prediction and Confidence**: The model made predictions on the unseen test set, which were compared against true labels to measure performance and calculate confidence scores.
+
 #### 6.1.2 Classification Performance
-The optimized model resolved the semantic gap for 'Hard' queries (80% precision) and stabilized 'Extra Hard' classification.
+The optimized model resolved the semantic gap for 'Hard' queries (80% precision) and stabilized 'Extra Hard' classification. The tabulated results provide a structured numerical summary of the model's strengths across different complexity tiers.
+
+
 
 ### 6.2 Visualization Analysis
 - **PCA vs. t-SNE**: PCA was used to capture global variance (difficulty mapping), while t-SNE was employed to capture local thematic neighborhoods.
