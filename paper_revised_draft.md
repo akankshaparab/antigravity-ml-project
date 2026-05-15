@@ -21,7 +21,7 @@ The efficacy of Text-to-SQL systems in Retrieval-Augmented Generation (RAG) arch
 
 ## 3 Dataset
 ### 3.1 Data Description
-- **Baseline Architecture**: The Spider dataset, comprising over 10,000 query-SQL pairs across 200 databases. Publicly available at https://yale-lily.github.io/spider.
+- **Baseline Architecture**: The Spider dataset, comprising approximately 10,000 query-SQL pairs across 200 databases. Publicly available at https://yale-lily.github.io/spider.
 - **Production Architecture**: A production-scale environment (768D) derived from a vanna.ai Data Analyst agent.
 
 ### 3.2 Data Statistics
@@ -30,6 +30,7 @@ The distribution of query difficulty (post-rebalancing) is as follows:
 - **Medium**: 3,496
 - **Hard**: 2,826
 - **Extra Hard**: 661
+![Spider Class Distribution](spider_class_distribution.png)
 
 ### 3.3 EDA and Preprocessing
 - **Data Matrix Formatting**: The dataset was prepared in standard machine learning format: a feature matrix $X$ (embeddings) and a label vector $y$ (difficulty classes). Matrix $X$ is used for training and testing, while $y$ serves as the ground truth for prediction.
@@ -51,10 +52,10 @@ The distribution of query difficulty (post-rebalancing) is as follows:
     - **Operational Speed**: Lower dimensionality is critical for the real-time throughput of the SVM in a production query routing layer.
     - **Information Density**: Initial scree plot analysis suggested a primary elbow point at 50, where the "vast majority" of the semantic meaning was captured, despite a lower total variance explained (~62.5%).
 - **Scree Plot Insights**: The scree plot was utilized to answer how variance is distributed across dimensions within the reduced space, helping to define the threshold where marginal gains in signal diminish.
-- *[Image: pca_variant_comparison.png]*
+- ![PCA Variant Comparison](pca_variant_comparison.png)
 
 ### 4.2 Query Complexity Classification
-- **Kernel Comparison**: Parallel comparison of RBF, Linear, and Poly kernels. The **RBF kernel** was selected as the winner for its superior ability to resolve linguistic overlap.
+- **Kernel Comparison**: Parallel comparison of RBF, Linear, and Poly kernels. The **RBF kernel** was selected as the winner for its superior ability to resolve **semantic ambiguity** within the query space.
 - **Weight Optimization**: Implemented `class_weight='balanced'` and custom adjusted weights to resolve the scarcity of Extra Hard queries.
 
 ## 5 Experiments
@@ -64,13 +65,14 @@ The distribution of query difficulty (post-rebalancing) is as follows:
 
 ### 5.2 Hyperparameter Settings
 - **Identification of the Elbow Zone**: Through sensitivity analysis, we identified that the optimal performance-to-cost ratio occurs in an **"Elbow Zone" between 30 and 50 dimensions**. Beyond this point, gains in accuracy, precision, and recall were found to plateau.
-- *[Image Placeholder: SVM Performance vs Number of PCA Components]*
+- ![SVM Sensitivity Analysis](phase4_sensitivity_analysis.png)
 
 ### 5.3 Evaluation Metrics
 Performance was evaluated using several statistical indicators:
 - **Weighted Metrics**: We calculated weighted averages for **Accuracy, Precision, and Recall**. This weighting is essential as it accounts for the relative size (support) of each difficulty set, ensuring that the dominant "Easy/Medium" classes do not overshadow the "Extra Hard" minority.
 - **Silhouette Score**: This metric was used to measure cluster cohesion. A positive silhouette score indicated that queries of the same type form coherent geometric clusters, validating the semantic separation of the difficulty labels.
-- **Heatmap Insights**: The generated similarity heatmap showed distinct diagonal blocks, indicating high intra-class similarity. Notably, the "Extra Hard" block appeared the most isolated, confirming it as a distinct semantic neighborhood. The heatmap also revealed that while difficulty drives separation, secondary clustering often occurs based on thematic/theme similarity.
+- **Heatmap Insights**: The generated similarity heatmap showed distinct diagonal blocks, indicating high intra-class similarity. Notably, the "Extra Hard" block appeared the most isolated, confirming it as a distinct semantic neighborhood. The heatmap also revealed that while difficulty drives separation, secondary clustering often occurs based on **thematic similarity**.
+![Similarity Heatmap](phase3_similarity_heatmap.png)
 
 ## 6 Results and Discussion
 ### 6.1 Benchmark Results and Evolution
@@ -101,7 +103,7 @@ The optimized model was re-evaluated against the 179D manifold.
     - **Success with Complexity**: Accuracy on "Extra Hard" queries jumped to **98/132**, validating that the model successfully learned structural differences.
     - ![Production Metric Comparison](phase5_metric_comparison.png)
     - **Observation**: The "short bars" of the baseline were replaced by strong, uniform precision and recall across the board.
-- **Conclusion**: By capturing the variance "tail" and balancing the classifier's sensitivity, the system became viable for production-grade routing.
+- **Conclusion**: By expanding the manifold to **179 components** (capturing 90% variance) and balancing the classifier's sensitivity, the system became viable for production-grade routing.
 
 
 
@@ -115,8 +117,9 @@ The empirical results provide a robust, evidence-backed justification for the de
 - **Efficient Query Routing Layer**: The implementation of the SVM-RBF classifier enables a high-efficiency model cascading strategy. 
     - **Tier 1 (High Volume)**: "Easy" and "Medium" queries, which constitute approximately **80% of total traffic**, are successfully routed to **free models via Openrouter**.
     - **Tier 2 (High Logic)**: "Hard" and "Extra Hard" queries are strategically directed to **Claude Haiku**, ensuring that premium compute is only utilized for tasks requiring advanced logical reasoning.
-- **Infrastructure ROI and Performance**: PCA results identified a **71% signal redundancy** within the original embedding space. Eliminating this "semantic noise" through dimensionality reduction guarantees faster similarity search retrieval and significantly lower cloud infrastructure costs.
+- **Infrastructure ROI and Performance**: The discovery of significant signal redundancy within the embedding manifold allows for the elimination of semantic noise. This reduction directly translates to **accelerated similarity search retrieval** and a minimized memory footprint, ensuring the system remains responsive at production scales while minimizing cloud overhead (see Table 1).
 
+**Table 1: Infrastructure ROI via Dimensionality Reduction**
 | Feature | Original (Without PCA) | Reduced (With PCA) | Savings |
 | :--- | :--- | :--- | :--- |
 | **Dimensions** | 768 | 220 | ~71% Reduction |
@@ -127,7 +130,7 @@ The empirical results provide a robust, evidence-backed justification for the de
 Analysis of the misclassifications reveals that the core challenge lies in the model's sensitivity: it is naturally more attuned to **semantic themes** (the subject of the query) than to **keyword complexity** (the structure of the query). When aggressive PCA compression is applied, the structural logic is the first to be discarded as "noise." By expanding to 179 components and applying balanced weights, we successfully bridged the gap between the natural language meaning and the underlying SQL logical structure.
 
 ## 7 Conclusion
-A range of 50–80 PCA components is sufficient for representing Text-to-SQL complexity. The resulting SVM provides a principled foundation for automated enterprise query routing.
+The research demonstrates that while an initial elbow point of **50 PCA components** captures the semantic core of Text-to-SQL queries, an expansion to **179 components** (baseline) or **220 components** (production) is necessary to preserve the logical "tail" required for complex query classification. The resulting SVM-RBF model provides a principled, cost-efficient foundation for automated enterprise query routing.
 
 ## 8 References
 1. **Yu, T., et al. (2018).** "Spider: A Large-Scale Hierarchical Semantic Parsing and Text-to-SQL Dataset." *arXiv preprint arXiv:1809.08887*.
