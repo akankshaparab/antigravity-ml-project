@@ -189,12 +189,13 @@ The empirical results provide a robust, evidence-backed justification for the de
 - **Efficient Query Routing Layer**: The implementation of the SVM-RBF classifier enables a high-efficiency model cascading strategy. 
     - **Tier 1 (High Volume)**: "Easy" and "Medium" queries, which constitute approximately **80% of total traffic**, are successfully routed to **free models via OpenRouter**.
     - **Tier 2 (High Logic)**: "Hard" and "Extra Hard" queries are strategically directed to **Claude Haiku**, ensuring that premium compute is only utilized for tasks requiring advanced logical reasoning.
-- **Infrastructure ROI and Performance**: The discovery of significant signal redundancy within the production manifold allows for the elimination of semantic noise. This reduction directly translates to **accelerated similarity search retrieval** and a **70.7% reduction in database storage size** (from 37.2 MB to 10.9 MB), ensuring the system remains responsive at production scales while minimizing cloud overhead (see Table 1).
-
-The real-time execution flow of this query routing layer is shown in Figure 17. For every incoming query, the system generates its normalized embedding, reduces its dimensions using the pre-trained PCA components, and classifies its complexity to route it to free models via OpenRouter (Tier 1) or Claude Haiku (Tier 2). Simultaneously, a Pinecone database similarity query serves as an out-of-distribution (OOD) safety check.
 
 ![Online Query Routing Architecture](produc_vers/online_routing_flowchart_updated.png)
 *Figure 17: Online Query Routing Architecture*
+
+The real-time execution flow of this query routing layer is shown in Figure 17. For every incoming query, the system generates its normalized embedding, reduces its dimensions using the pre-trained PCA components, and classifies its complexity to route it to free models via OpenRouter (Tier 1) or Claude Haiku (Tier 2). Simultaneously, a Pinecone database similarity query serves as an out-of-distribution (OOD) safety check.
+
+- **Infrastructure ROI and Performance**: The discovery of significant signal redundancy within the production manifold allows for the elimination of semantic noise. This reduction directly translates to **accelerated similarity search retrieval** and a **70.7% reduction in database storage size** (from 37.2 MB to 10.9 MB), ensuring the system remains responsive at production scales while minimizing cloud overhead (see Table 1).
 
 **Table 1: Infrastructure ROI via Dimensionality Reduction**
 | Feature | Original (Without PCA) | Reduced (With PCA) | Savings |
