@@ -145,7 +145,7 @@ Performance was evaluated using several statistical indicators:
 *Figure 11: Similarity Heatmap — Demonstrating high intra-class similarity and clear diagonal cluster separation.*
 
 ## 6 Results and Discussion
-### 6.1 Benchmark Results and Evolution
+### 6.1 Benchmark Results
 
 #### 6.1.1 Initial Baseline Performance (Standardized at 50 Components)
 The first iteration of the classification layer utilized the 50-component subspace. While efficient, this configuration revealed critical limitations in handling high-complexity queries.
@@ -188,7 +188,11 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 
 - **Observation**: The "short bars" of the baseline were replaced by strong, uniform precision and recall across the board.
 - **Conclusion**: By expanding the manifold to **179 components** (baseline) or **220 components** (production) to capture 90% variance, and balancing the classifier's sensitivity, the system became viable for production-grade routing.
-    - **Methodological Validation**: These comparative results empirically validate our routing architecture. By transitioning from the baseline Spider embeddings to the higher-dimensional production embeddings, the system achieved a **10-point increase in F1-Score** (rising from 0.71 to 0.81). This performance jump indicates that higher-dimensional production embeddings provide superior geometric separability for the SVM classifier, confirming the routing layer as a highly viable and robust solution for live enterprise traffic.
+
+### 6.2 Visualization Analysis
+**PCA vs. t-SNE**: PCA was used to capture global variance (difficulty mapping), while t-SNE [9] was employed to capture local thematic neighborhoods.
+
+**Methodological Validation**: These comparative results empirically validate our routing architecture. By transitioning from the baseline Spider embeddings to the higher-dimensional production embeddings, the system achieved a **10-point increase in F1-Score** (rising from 0.71 to 0.81). This performance jump indicates that higher-dimensional production embeddings provide superior geometric separability for the SVM classifier, confirming the routing layer as a highly viable and robust solution for live enterprise traffic.
 
 ![Live vs. Spider Distribution Comparison](produc_vers/live_vs_spider_comparison.png)
 *Figure 16: Live vs. Baseline Projection — Manifold comparison confirming academic benchmark compatibility with production traffic.*
@@ -198,9 +202,6 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 - **Y-Axis (Semantic Deviation)**: The Y-axis measures the relative semantic position using a similarity score, representing how far each query vector deviates from the mean query vector.
 - **Core Overlap (L1-Dense Zone)**: The extensive overlap demonstrates a 90% semantic match between the Spider baseline [1] and live enterprise traffic, verifying that academic benchmarks are highly representative of production language styles.
 - **Outliers (Right Tail)**: The right side of the plot captures unusual, production-specific queries (outliers) that represent enterprise-specific nomenclature not present in academic datasets.
-
-### 6.2 Visualization Analysis
-**PCA vs. t-SNE**: PCA was used to capture global variance (difficulty mapping), while t-SNE [9] was employed to capture local thematic neighborhoods.
 
 ### 6.3 Discussion
 #### 6.3.1 Implications for Production Architecture
