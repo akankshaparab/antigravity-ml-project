@@ -156,13 +156,13 @@ The first iteration of the classification layer utilized the 50-component subspa
 
 **Evaluation Visuals (Initial Phase)**:
 
-![Baseline Confusion Matrix](pre_vers_confu_matr.png)
-*Figure 12: Baseline Confusion Matrix — Illustrating the misclassification of Extra Hard queries in the 50D baseline model.*
+![Initial Confusion Matrix](pre_vers_confu_matr.png)
+*Figure 12: Initial Confusion Matrix — Illustrating the misclassification of Extra Hard queries in the 50D baseline model.*
 
 - **Observation**: The model struggled significantly with "Extra Hard" queries (only 43/132 correct). There was a noticeable "pull" toward the Medium class, indicating a systemic bias toward predicting the majority categories.
 
-![Baseline Metric Comparison](pre_vers_metric_comp.png)
-*Figure 13: Baseline Metric Comparison — Precision and recall disparities across difficulty tiers in the aggressive compression phase.*
+![Initial Metric Comparison](pre_vers_metric_comp.png)
+*Figure 13: Initial Metric Comparison — Precision and recall disparities across difficulty tiers in the aggressive compression phase.*
 
 - **Observation**: Performance was highly uneven. While the model achieved a respectable 80% precision for "Hard" queries, it hit a performance floor of **32% recall** for "Extra Hard" types.
 - **Conclusion**: Raw embeddings and aggressive compression were insufficient for production. The near-random performance on complex queries confirmed that class imbalance and information loss must be addressed simultaneously.
@@ -177,14 +177,14 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 
 **Evaluation Visuals (Production Phase)**:
 
-![Production Confusion Matrix](phase5_confusion_matrix.png)
-*Figure 14: Production Confusion Matrix — Successful structural learning and diagonal performance in the optimized manifold (179D Baseline / 220D Production).*
+![Optimized Confusion Matrix](phase5_confusion_matrix.png)
+*Figure 14: Optimized Confusion Matrix — Successful structural learning and diagonal performance in the optimized baseline manifold (179D).*
 
 - **Observation**: The classifier achieved strong diagonal performance across all four classes. The most notable remaining confusion was a minor overlap between "Medium" and "Easy," suggesting a high semantic similarity between adjacent complexity levels.
 - **Success with Complexity**: Accuracy on "Extra Hard" queries jumped to **98/132**, validating that the model successfully learned structural differences.
 
-![Production Metric Comparison](phase5_metric_comparison.png)
-*Figure 15: Production Metric Comparison — Uniform performance across all query classes in the final 220D production layer.*
+![Optimized Metric Comparison](phase5_metric_comparison.png)
+*Figure 15: Optimized Metric Comparison — Uniform performance across all query classes in the optimized baseline manifold (179D).*
 
 - **Observation**: The "short bars" of the baseline were replaced by strong, uniform precision and recall across the board.
 - **Conclusion**: By expanding the manifold to **179 components** (baseline) or **220 components** (production) to capture 90% variance, and balancing the classifier's sensitivity, the system became viable for production-grade routing.
