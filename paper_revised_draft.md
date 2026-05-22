@@ -25,18 +25,30 @@ The efficacy of Text-to-SQL systems in Retrieval-Augmented Generation (RAG) arch
 - **Production Architecture**: A production-scale environment (768D) derived from a vanna.ai Data Analyst agent.
 
 ### 3.2 Data Statistics
-The distribution of query difficulty (post-rebalancing) is as follows:
+
+#### 3.2.1 Heuristic Difficulty Classification Framework
+The complexity classification of queries in both datasets is determined using a deterministic, rule-based SQL scoring heuristic. Complexity scores are accumulated based on SQL structural tokens:
+- Clauses like `JOIN`, `GROUP BY`, `ORDER BY`, and `HAVING` contribute $+1$ point each.
+- Set operators such as `INTERSECT`, `UNION`, and `EXCEPT` contribute $+2$ points each.
+- Nested subqueries (multiple `SELECT` statements) contribute $+2$ points each.
+
+The total accumulated score maps queries into discrete difficulty tiers:
+- **0 points**: `Easy`
+- **1 point**: `Medium`
+- **2–3 points**: `Hard`
+- **>3 points**: `Extra Hard`
+
+#### 3.2.2 Baseline Dataset (Spider)
+The distribution of query difficulty (post-rebalancing) for the academic Spider dataset is as follows:
 - **Easy**: 2,710
 - **Medium**: 3,496
 - **Hard**: 2,826
 - **Extra Hard**: 661
 
-*   **Heuristic Difficulty Classification Framework**: The complexity classification of queries in both datasets is determined using a deterministic, rule-based SQL scoring heuristic. Complexity scores are accumulated based on SQL structural tokens: clauses like `JOIN`, `GROUP BY`, `ORDER BY`, and `HAVING` contribute $+1$ point each; set operators such as `INTERSECT`, `UNION`, and `EXCEPT` contribute $+2$ points each; and nested subqueries contribute $+2$ points each. The total accumulated score maps queries into discrete difficulty tiers: 0 points corresponds to *Easy*, 1 point to *Medium*, 2–3 points to *Hard*, and scores exceeding 3 to *Extra Hard*.
-
 ![Spider Class Distribution](spider_class_distribution.png)
 *Figure 1: Spider Class Distribution — Visualizing the inherent data imbalance toward Medium and Hard complexity levels.*
 
-#### 3.2.2 Production Environment (Pinecone Database)
+#### 3.2.3 Production Environment (Pinecone Database)
 The production environment integrates the baseline Spider dataset with real-world query data fetched from the vanna.ai Data Analyst agent. The combined manifold contains:
 - **Spider Baseline**: 9,693 queries
 - **Live Production Queries**: 1,742 queries
