@@ -237,19 +237,33 @@ The research demonstrates that while an initial elbow point of **50 PCA componen
 
 ## 8 References
 [1] **Yu, T., et al. (2018).** "Spider: A Large-Scale Hierarchical Semantic Parsing and Text-to-SQL Dataset." *arXiv preprint arXiv:1809.08887*.
+
 [2] **Xiao, S., et al. (2023).** "C-Pack: Packaged Resources to Advance General Chinese Embedding." *arXiv preprint arXiv:2309.07597*. (BGE Embedding Models)
+
 [3] **Pedregosa, F., et al. (2011).** "Scikit-learn: Machine Learning in Python." *Journal of Machine Learning Research*.
+
 [4] **Salton, G., et al. (1975).** "A Vector Space Model for Automatic Indexing." *Communications of the ACM*.
+
 [5] **Conneau, A., et al. (2018).** "What you can cram into a single $&!#* vector: Probing sentence embeddings for linguistic properties." *ACL*.
+
 [6] **Levina, E., & Bickel, P. (2004).** "Maximum Likelihood Estimation of Intrinsic Dimension." *NIPS*.
+
 [7] **Gemini Team, Google. (2023).** "Gemini: A Family of Highly Capable Multimodal Models."
+
 [8] **Pinecone Systems Inc. (2024).** "Pinecone Vector Database Service."
+
 [9] **Van der Maaten, L., & Hinton, G. (2008).** "Visualizing Data using t-SNE." *Journal of Machine Learning Research*.
+
 [10] **Vanna.ai (2024).** Documentation for Production Data Analyst Agent Framework.
+
 [11] **Cortes, C., & Vapnik, V. (1995).** "Support-Vector Networks." *Machine Learning*, 20(3), 273-297.
+
 [12] **Anthropic. (2024).** "The Claude 3 Family: Technological Advancements in Large Language Models." *Technical Report*.
+
 [13] **OpenRouter. (2024).** "OpenRouter API Reference."
+
 [14] **Schölkopf, B., Smola, A., & Müller, K. R. (1998).** "Nonlinear Component Analysis as a Kernel Eigenvalue Problem." *Neural Computation*, 10(5), 1299-1319.
+
 [15] **Lewis, P., et al. (2020).** "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks." *Advances in Neural Information Processing Systems*, 33, 9459-9474.
 
 
