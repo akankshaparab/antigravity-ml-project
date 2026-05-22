@@ -31,6 +31,8 @@ The distribution of query difficulty (post-rebalancing) is as follows:
 - **Hard**: 2,826
 - **Extra Hard**: 661
 
+*   **Heuristic Difficulty Classification Framework**: The complexity classification of queries in both datasets is determined using a deterministic, rule-based SQL scoring heuristic. Complexity scores are accumulated based on SQL structural tokens: clauses like `JOIN`, `GROUP BY`, `ORDER BY`, and `HAVING` contribute $+1$ point each; set operators such as `INTERSECT`, `UNION`, and `EXCEPT` contribute $+2$ points each; and nested subqueries contribute $+2$ points each. The total accumulated score maps queries into discrete difficulty tiers: 0 points corresponds to *Easy*, 1 point to *Medium*, 2–3 points to *Hard*, and scores exceeding 3 to *Extra Hard*.
+
 ![Spider Class Distribution](spider_class_distribution.png)
 *Figure 1: Spider Class Distribution — Visualizing the inherent data imbalance toward Medium and Hard complexity levels.*
 
@@ -61,31 +63,47 @@ This expanded dataset ensures that the SVM-RBF router is trained not only on aca
 - **Geometric Validation**: Vectors were normalized to unit length and verified using **Geometric Mean Squared Error (MSE)**. For visualization purposes, string labels were converted to a numerical format (`Easy: 0` to `Extra Hard: 3`) to facilitate consistent color coding across projections.
 
 ## 4 Methodology
+The SAGE system employs a two-phase architecture: an offline training pipeline to optimize the query routing classifier, and an online routing pipeline for real-time inference. The offline training workflow is shown in Figure 4, detailing how raw queries undergo heuristic labeling, embedding generation, 220D PCA dimensionality reduction, and SVM training to yield the final serialized router model (`router_artifacts.pkl`).
+
+![Training Workflow](produc_vers/offline_training_flowchart.png)
+*Figure 4: Training Workflow*
+
+*   **Complementary Roles of PCA and SVM**: The SAGE routing architecture employs Principal Component Analysis (PCA) and Support Vector Machines (SVM) for distinct, complementary roles in the optimization pipeline. PCA functions as an unsupervised dimensionality reduction step that filters high-dimensional semantic noise (e.g., phrasing variances, minor punctuation) by extracting the orthogonal components of maximum variance. This yields a dense, lower-dimensional manifold that minimizes storage size and search latency. SVM then operates as a supervised classification engine, taking these compressed representation coordinates to construct optimal separating hyperplanes between query difficulty categories, using a non-linear kernel to resolve complex decision boundaries.
+
 ### 4.1 Dimensionality Reduction & Selection
-- **Benchmarking Methodology**: We evaluated four PCA variants (Standard, Incremental, Sparse, Kernel) to identify the most efficient method for production scaling. The `benchmark_pca()` function used a timing mechanism (`time.time()`) to record the duration before and after the `fit_transform()` operation, identifying Standard PCA as the optimal balance between speed and variance retention.
+- **Benchmarking Methodology**: We evaluated four PCA variants (Standard, Incremental, Sparse, and Kernel) to identify the most efficient method for production scaling. Out of dozens of dimensionality reduction techniques, these four were specifically selected because they represent the fundamental mathematical approaches to modeling different data manifolds: linear vs. non-linear and dense vs. sparse data structures. The benchmarking execution (using `benchmark_pca()`) measured the computational duration of `fit_transform()` using `time.time()`, confirming that Standard PCA offered the optimal balance between inference speed and variance retention.
 
 ![PCA Variant Comparison](pca_variant_comparison.png)
-*Figure 4: PCA Variant Comparison — Benchmark of training time and variance retention across four major dimensionality reduction methods.*
+*Figure 5: PCA Variant Comparison — Benchmark of training time and variance retention across four major dimensionality reduction methods.*
 - **Component Rationale**: We standardized the initial analysis at **50 components** for three primary reasons:
     - **Benchmarking Efficiency**: It provided a manageable baseline for comparing the computational overhead of the four PCA variants.
     - **Operational Speed**: Lower dimensionality is critical for the real-time throughput of the SVM in a production query routing layer.
     - **Information Density**: Initial scree plot analysis suggested a primary elbow point at 50, where the "vast majority" of the semantic meaning was captured, despite a lower total variance explained (~62.5%).
 
 ![Variance Analysis Plot](variance_analysis_plot.png)
-*Figure 5: Variance Analysis Plot — Quantitative proof of the 62.5% vs. 90% variance thresholds across component counts.*
+*Figure 6: Variance Analysis Plot — Quantitative proof of the 62.5% vs. 90% variance thresholds across component counts.*
 - **Scree Plot Insights**: The scree plot was utilized to answer how variance is distributed across dimensions within the reduced space, helping to define the threshold where marginal gains in signal diminish.
+    - **Semantic Interpretation of Variance Loss**: In our optimization, retaining 90% of the variance (at 179/220 components) implies a 10% loss of total variance. This discarded 10% is shown to consist mostly of semantic noise—minor phrasing variations, vocabulary synonyms, or punctuation marks that do not alter the underlying logical structure of the query.
+    - **Production Scree Plot Analysis**: The scree plot for the 768D production manifold (Figure 8) exhibits a rapid initial decay, where the first few principal components capture the primary syntactic patterns of Text-to-SQL queries. As the components scale, the curve flattens into a long tail representing diminishing returns, where adding dimensions only captures noise rather than structural query complexity.
 
 ![Baseline Scree Plot](phase3_scree_plot_final.png)
-*Figure 6: Baseline Scree Plot — Identifying the 50-component primary elbow point in the 384D academic manifold.*
+*Figure 7: Baseline Scree Plot — Identifying the 50-component primary elbow point in the 384D academic manifold.*
 
 ![Production Scree Plot](produc_vers/scree_plot_768.png)
-*Figure 7: Production Scree Plot — Variance distribution across the 768D production-scale embedding manifold.*
+*Figure 8: Production Scree Plot — Variance distribution across the 768D production-scale embedding manifold.*
 
 ### 4.2 Query Complexity Classification
-- **Kernel Comparison**: Parallel comparison of RBF, Linear, and Poly kernels. The **RBF kernel** was selected as the winner for its superior ability to resolve **semantic ambiguity** within the query space.
+- **Kernel Comparison and Selection**: We conducted a parallel performance comparison of RBF, Linear, and Polynomial kernels to determine the optimal SVM decision boundary.
+    - **Linear Kernel Inadequacy**: Visual inspection of the projection scatter plots indicates that difficulty categories cannot be separated by straight lines, rendering linear boundaries highly error-prone.
+    - **Polynomial Kernel Inconsistency**: While the Polynomial kernel can model complex interfaces, it is highly sensitive to hyperparameter tuning, computationally slower, and performs inconsistently when scaled across varying dimensions on live traffic.
+    - **RBF Selection Rationale**: The Radial Basis Function (RBF) kernel was selected as it is uniquely suited for production routing because:
+        1. It models highly curved, non-linear boundaries.
+        2. It resolves semantic and linguistic overlap between adjacent classes (such as Easy and Medium) using a non-linear hyperplane.
+        3. It exhibits highly consistent accuracy and F1-scores across all component counts, ensuring stability.
+        4. It employs a local approach that prioritizes nearby observations, making it ideal for capturing localized, high-density pockets of Easy queries.
 
 ![Kernel Comparison Graph](phase4_kernel_comparison.png)
-*Figure 8: Kernel Comparison Graph — Visualizing the RBF kernel's superior ability to resolve non-linear semantic boundaries.*
+*Figure 9: Kernel Comparison Graph — Visualizing the RBF kernel's superior ability to resolve non-linear semantic boundaries.*
 - **Weight Optimization**: Implemented `class_weight='balanced'` and custom adjusted weights to resolve the scarcity of Extra Hard queries.
 
 ## 5 Experiments
@@ -97,7 +115,7 @@ This expanded dataset ensures that the SVM-RBF router is trained not only on aca
 - **Identification of the Elbow Zone**: Through sensitivity analysis, we identified that the optimal performance-to-cost ratio occurs in an **"Elbow Zone" between 30 and 50 dimensions**. Beyond this point, gains in accuracy, precision, and recall were found to plateau.
 
 ![SVM Sensitivity Analysis (Production)](produc_vers/sensitivity_results.png)
-*Figure 9: SVM Sensitivity Results — Performance plateau confirming the 30-50D range as the optimal efficiency zone.*
+*Figure 10: SVM Sensitivity Results — Performance plateau confirming the 30-50D range as the optimal efficiency zone.*
 
 ### 5.3 Evaluation Metrics
 Performance was evaluated using several statistical indicators:
@@ -106,7 +124,7 @@ Performance was evaluated using several statistical indicators:
 - **Heatmap Insights**: The generated similarity heatmap showed distinct diagonal blocks, indicating high intra-class similarity. Notably, the "Extra Hard" block appeared the most isolated, confirming it as a distinct semantic neighborhood. The heatmap also revealed that while difficulty drives separation, secondary clustering often occurs based on **thematic similarity**.
 
 ![Similarity Heatmap](phase3_similarity_heatmap.png)
-*Figure 10: Similarity Heatmap — Demonstrating high intra-class similarity and clear diagonal cluster separation.*
+*Figure 11: Similarity Heatmap — Demonstrating high intra-class similarity and clear diagonal cluster separation.*
 
 ## 6 Results and Discussion
 ### 6.1 Benchmark Results and Evolution
@@ -119,12 +137,12 @@ The first iteration of the classification layer utilized the 50-component subspa
 - **Evaluation Visuals (Initial Phase)**:
 
 ![Baseline Confusion Matrix](pre_vers_confu_matr.png)
-*Figure 11: Baseline Confusion Matrix — Illustrating the misclassification of Extra Hard queries in the 50D baseline model.*
+*Figure 12: Baseline Confusion Matrix — Illustrating the misclassification of Extra Hard queries in the 50D baseline model.*
 
     - **Observation**: The model struggled significantly with "Extra Hard" queries (only 43/132 correct). There was a noticeable "pull" toward the Medium class, indicating a systemic bias toward predicting the majority categories.
 
 ![Baseline Metric Comparison](pre_vers_metric_comp.png)
-*Figure 12: Baseline Metric Comparison — Precision and recall disparities across difficulty tiers in the aggressive compression phase.*
+*Figure 13: Baseline Metric Comparison — Precision and recall disparities across difficulty tiers in the aggressive compression phase.*
 
     - **Observation**: Performance was highly uneven. While the model achieved a respectable 80% precision for "Hard" queries, it hit a performance floor of **32% recall** for "Extra Hard" types.
 - **Conclusion**: Raw embeddings and aggressive compression were insufficient for production. The near-random performance on complex queries confirmed that class imbalance and information loss must be addressed simultaneously.
@@ -140,19 +158,26 @@ The optimized model was re-evaluated against the 179D baseline manifold and subs
 - **Evaluation Visuals (Production Phase)**:
 
 ![Production Confusion Matrix](phase5_confusion_matrix.png)
-*Figure 13: Production Confusion Matrix — Successful structural learning and diagonal performance in the optimized manifold (179D Baseline / 220D Production).*
+*Figure 14: Production Confusion Matrix — Successful structural learning and diagonal performance in the optimized manifold (179D Baseline / 220D Production).*
 
     - **Observation**: The classifier achieved strong diagonal performance across all four classes. The most notable remaining confusion was a minor overlap between "Medium" and "Easy," suggesting a high semantic similarity between adjacent complexity levels.
     - **Success with Complexity**: Accuracy on "Extra Hard" queries jumped to **98/132**, validating that the model successfully learned structural differences.
 
 ![Production Metric Comparison](phase5_metric_comparison.png)
-*Figure 14: Production Metric Comparison — Uniform performance across all query classes in the final 220D production layer.*
+*Figure 15: Production Metric Comparison — Uniform performance across all query classes in the final 220D production layer.*
 
     - **Observation**: The "short bars" of the baseline were replaced by strong, uniform precision and recall across the board.
 - **Conclusion**: By expanding the manifold to **179 components** (baseline) or **220 components** (production) to capture 90% variance, and balancing the classifier's sensitivity, the system became viable for production-grade routing.
+    - **Methodological Validation**: These comparative results empirically validate our routing architecture. By transitioning from the baseline Spider embeddings to the higher-dimensional production embeddings, the system achieved a **10-point increase in F1-Score** (rising from 0.71 to 0.81). This performance jump indicates that higher-dimensional production embeddings provide superior geometric separability for the SVM classifier, confirming the routing layer as a highly viable and robust solution for live enterprise traffic.
 
 ![Live vs. Spider Distribution Comparison](produc_vers/live_vs_spider_comparison.png)
-*Figure 15: Live vs. Baseline Projection — Manifold comparison confirming academic benchmark compatibility with production traffic.*
+*Figure 16: Live vs. Baseline Projection — Manifold comparison confirming academic benchmark compatibility with production traffic.*
+
+- **Distribution Comparison Analysis**: The manifold comparison in Figure 16 evaluates the distribution of the academic Spider baseline queries against live Pinecone production database queries:
+    - **X-Axis (Sample Spread)**: Represents the sample count, with queries ordered along the axis to visualize their semantic density and distribution.
+    - **Y-Axis (Semantic Deviation)**: Measures the relative semantic position using a similarity score, representing how far each query vector deviates from the mean query vector.
+    - **Core Overlap (L1-Dense Zone)**: The extensive overlap demonstrates a 90% semantic match between the Spider baseline and live enterprise traffic, verifying that academic benchmarks are highly representative of production language styles.
+    - **Outliers (Right Tail)**: The right side of the plot captures unusual, production-specific queries (outliers) that represent enterprise-specific nomenclature not present in academic datasets.
 
 ### 6.2 Visualization Analysis
 - **PCA vs. t-SNE**: PCA was used to capture global variance (difficulty mapping), while t-SNE was employed to capture local thematic neighborhoods.
@@ -164,20 +189,27 @@ The empirical results provide a robust, evidence-backed justification for the de
 - **Efficient Query Routing Layer**: The implementation of the SVM-RBF classifier enables a high-efficiency model cascading strategy. 
     - **Tier 1 (High Volume)**: "Easy" and "Medium" queries, which constitute approximately **80% of total traffic**, are successfully routed to **free models via OpenRouter**.
     - **Tier 2 (High Logic)**: "Hard" and "Extra Hard" queries are strategically directed to **Claude Haiku**, ensuring that premium compute is only utilized for tasks requiring advanced logical reasoning.
-- **Infrastructure ROI and Performance**: The discovery of significant signal redundancy within the production manifold allows for the elimination of semantic noise. This reduction directly translates to **accelerated similarity search retrieval** and a minimized memory footprint, ensuring the system remains responsive at production scales while minimizing cloud overhead (see Table 1).
+- **Infrastructure ROI and Performance**: The discovery of significant signal redundancy within the production manifold allows for the elimination of semantic noise. This reduction directly translates to **accelerated similarity search retrieval** and a **70.7% reduction in database storage size** (from 37.2 MB to 10.9 MB), ensuring the system remains responsive at production scales while minimizing cloud overhead (see Table 1).
+
+The real-time execution flow of this query routing layer is shown in Figure 17. For every incoming query, the system generates its normalized embedding, reduces its dimensions using the pre-trained PCA components, and classifies its complexity to route it to free models via OpenRouter (Tier 1) or Claude Haiku (Tier 2). Simultaneously, a Pinecone database similarity query serves as an out-of-distribution (OOD) safety check.
+
+![Online Query Routing Architecture](produc_vers/online_routing_flowchart_updated.png)
+*Figure 17: Online Query Routing Architecture*
 
 **Table 1: Infrastructure ROI via Dimensionality Reduction**
 | Feature | Original (Without PCA) | Reduced (With PCA) | Savings |
 | :--- | :--- | :--- | :--- |
 | **Dimensions** | 768 | 220 | ~71% Reduction |
-| **Data Size (Est.)** | 37.2 MB | 10.9 MB | 26.3 MB Saved |
+| **Data Size (Est.)** | 37.2 MB | 10.9 MB | 26.3 MB Saved (70.7% Reduction) |
 
 
 #### 6.3.2 Identifying the Semantic Gap
 Analysis of the misclassifications reveals that the core challenge lies in the model's sensitivity: it is naturally more attuned to **semantic themes** (the subject of the query) than to **keyword complexity** (the structure of the query). When aggressive PCA compression is applied, the structural logic is the first to be discarded as "noise." By expanding the **baseline architecture to 179 components** and applying balanced weights, we successfully bridged the gap between the natural language meaning and the underlying SQL logical structure.
 
+*   **Interpretation of the 768D Projection**: In the 2D projection of the 768D embedding space (Figure 18), the axes represent the two strongest mathematical directions of variation in the text. This linear transformation projects the high-dimensional space into a visualizable plane—analogous to shining a light on a 768D object and observing its 2D shadow. Based on the complex, overlapping shapes observed in this scatter plot, a non-linear estimator was required to draw effective boundaries between the difficulty groups, justifying the selection of a kernel-based approach.
+
 ![Semantic Blind Spot Map](produc_vers/blind_spot_map.png)
-*Figure 16: Semantic Blind Spot Map — Visualizing geometric regions where structural logic is susceptible to high-dimensional semantic noise.*
+*Figure 18: Semantic Blind Spot Map — Visualizing geometric regions where structural logic is susceptible to high-dimensional semantic noise.*
 
 ## 7 Conclusion
 The research demonstrates that while an initial elbow point of **50 PCA components** captures the semantic core of Text-to-SQL queries, an expansion to **179 components** (baseline) or **220 components** (production) is necessary to preserve the logical "tail" required for complex query classification. The resulting SVM-RBF model provides a principled, cost-efficient foundation for automated enterprise query routing.
