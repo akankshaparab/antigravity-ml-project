@@ -65,13 +65,8 @@ This expanded dataset ensures that the SVM-RBF router is trained not only on aca
 
 ![Geometric Cluster Map](phase3_geometric_clusters.png)
 *Figure 3: Geometric Cluster Map — 2D projection confirming that query difficulty levels form distinct, separable semantic neighborhoods.*
-- **Difficulty Classifier Logic**: Implemented a point-based scoring system to quantify complexity:
-    - **+1 Point**: `JOIN`, `GROUP BY`, `ORDER BY`, `HAVING`.
-    - **+2 Points**: `INTERSECT`, `UNION`, `EXCEPT`.
-    - **+2 Points**: Nested Queries (multiple `SELECT` statements).
-- **Heuristic Rebalancing**: 
-    - *Initial Model*: Scores of 1-2 were labeled as "Medium," leading to over-saturation of the class. 
-    - *Optimized Model*: 0=Easy, 1=Medium, 2-3=Hard, and **>3=Extra Hard**. This shift corrected the bias where "Medium was catching too much" and "Extra Hard was catching too little."
+- **Difficulty Classifier Logic**: Leveraged the point-based scoring system detailed in Section 3.2.1 to quantify complexity based on SQL tokens.
+- **Heuristic Rebalancing**: To correct class distribution bias during preprocessing, we adjusted the classification boundaries. Originally, any query scoring 1 or 2 was classified as "Medium," leading to severe over-saturation of that category. Rebalancing the thresholds (0 for Easy, 1 for Medium, 2–3 for Hard, and >3 for Extra Hard) resolved this bias, improving minority class learning without losing structural complexity markers.
 - **Geometric Validation**: Vectors were normalized to unit length and verified using **Geometric Mean Squared Error (MSE)**. For visualization purposes, string labels were converted to a numerical format (`Easy: 0` to `Extra Hard: 3`) to facilitate consistent color coding across projections.
 
 ## 4 Methodology
@@ -205,7 +200,7 @@ The empirical results provide a robust, evidence-backed justification for the de
 ![Online Query Routing Architecture](produc_vers/online_routing_flowchart_updated.png)
 *Figure 17: Online Query Routing Architecture*
 
-The real-time execution flow of this query routing layer is shown in Figure 17. For every incoming query, the system generates its normalized embedding, reduces its dimensions using the pre-trained PCA components, and classifies its complexity to route it to free models via OpenRouter (Tier 1) or Claude Haiku (Tier 2). Simultaneously, a Pinecone database similarity query serves as an out-of-distribution (OOD) safety check.
+The real-time execution flow of this query routing layer is shown in Figure 17. For every incoming query, the system generates its normalized embedding, reduces its dimensions using the pre-trained PCA components, and classifies its complexity to route it to the appropriate model tier (Tier 1 or Tier 2) defined above. Simultaneously, a Pinecone database similarity query serves as an out-of-distribution (OOD) safety check to guard against semantic outliers.
 
 - **Infrastructure ROI and Performance**: The discovery of significant signal redundancy within the production manifold allows for the elimination of semantic noise. This reduction directly translates to **accelerated similarity search retrieval** and a **70.7% reduction in database storage size** (from 37.2 MB to 10.9 MB), ensuring the system remains responsive at production scales while minimizing cloud overhead (see Table 1).
 
