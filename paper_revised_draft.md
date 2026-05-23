@@ -67,7 +67,7 @@ Prior to model training, exploratory data analysis (EDA) and preprocessing were 
 
 **Data Matrix Formatting**: The dataset was prepared in standard machine learning format [3]: a feature matrix $X$ (embeddings) and a label vector $y$ (difficulty classes). Matrix $X$ is used for training and testing, while $y$ serves as the ground truth for prediction.
 
-**Geometric Retrieval Theory**: By setting `normalize_embeddings=True` during the embedding process, we constrained vectors to a constant magnitude (unit length) [4]. Since vectors consist of both magnitude and direction, this normalization allows the model to prioritize **directional similarity**. Vectors pointing in the same direction indicate a similar difficulty level, providing a more robust metric than distance alone in high-dimensional space, as visualized in Figure 3.
+**Geometric Retrieval Theory**: By normalizing the embedding vectors to unit length during the encoding process, the vector representations were constrained to a constant magnitude [4]. Since vectors consist of both magnitude and direction, this normalization allows the model to prioritize **directional similarity**. Vectors pointing in the same direction indicate a similar difficulty level, providing a more robust metric than distance alone in high-dimensional space, as visualized in Figure 3.
 
 ![Geometric Cluster Map](phase3_geometric_clusters.png)
 *Figure 3: Geometric Cluster Map (PCA vs. t-SNE)*
@@ -97,7 +97,7 @@ The SAGE system employs a two-phase architecture: an offline training pipeline t
 **Complementary Roles of PCA and SVM**: The SAGE routing architecture employs Principal Component Analysis (PCA) and Support Vector Machines (SVM) [11] for distinct, complementary roles in the optimization pipeline. PCA functions as an unsupervised dimensionality reduction step that filters high-dimensional semantic noise (e.g., phrasing variances, minor punctuation) [5] by extracting the orthogonal components of maximum variance. This yields a dense, lower-dimensional manifold that minimizes storage size and search latency. SVM then operates as a supervised classification engine, taking these compressed representation coordinates to construct optimal separating hyperplanes between query difficulty categories, using a non-linear kernel to resolve complex decision boundaries [11].
 
 ### 4.1 Dimensionality Reduction & Selection
-**Benchmarking Methodology**: We evaluated four PCA variants (Standard, Incremental, Sparse, and Kernel [14]) to identify the most efficient method for production scaling. Out of dozens of dimensionality reduction techniques, these four were specifically selected because they represent the fundamental mathematical approaches to modeling different data manifolds: linear vs. non-linear [14] and dense vs. sparse data structures. The benchmarking execution (using `benchmark_pca()`) measured the computational duration of `fit_transform()` using `time.time()`, confirming that Standard PCA offered the optimal balance between inference speed and variance retention [3].
+**Benchmarking Methodology**: We evaluated four PCA variants (Standard, Incremental, Sparse, and Kernel [14]) to identify the most efficient method for production scaling. From the wide range of available dimensionality reduction methods, these four were selected because they represent the fundamental mathematical approaches to modeling different data manifolds: linear vs. non-linear [14] and dense vs. sparse data structures. The benchmarking execution measured the computational duration of the dimensionality reduction transform, confirming that Standard PCA offered the optimal balance between inference speed and variance retention [3].
 
 ![PCA Variant Comparison](pca_variant_comparison.png)
 *Figure 5: PCA Variant Comparison — Benchmark of training time and variance retention across four major dimensionality reduction methods.*
@@ -122,13 +122,13 @@ The SAGE system employs a two-phase architecture: an offline training pipeline t
 
 ### 4.2 Query Complexity Classification
 **Kernel Comparison and Selection**: We conducted a parallel performance comparison of RBF, Linear, and Polynomial kernels to determine the optimal SVM decision boundary [11].
-- **Linear Kernel Inadequacy**: Visual inspection of the projection scatter plots indicates that difficulty categories cannot be separated by straight lines, rendering linear boundaries highly error-prone.
+- **Linear Kernel Inadequacy**: Visual inspection of the projection scatter plots indicates that difficulty categories are not linearly separable, rendering linear decision boundaries highly error-prone.
 - **Polynomial Kernel Inconsistency**: While the Polynomial kernel can model complex interfaces, it is highly sensitive to hyperparameter tuning, computationally slower, and performs inconsistently when scaled across varying dimensions on live traffic.
 - **RBF Selection Rationale**: The Radial Basis Function (RBF) kernel [11] was selected as it is uniquely suited for production routing because:
     1. It models highly curved, non-linear boundaries.
     2. It resolves semantic and linguistic overlap between adjacent classes (such as Easy and Medium) using a non-linear hyperplane.
     3. It exhibits highly consistent accuracy and F1-scores across all component counts, ensuring stability.
-    4. It employs a local approach that prioritizes nearby observations, making it ideal for capturing localized, high-density pockets of Easy queries.
+    4. It utilizes localized decision boundaries that prioritize neighboring observations, making it ideal for capturing localized, high-density pockets of Easy queries.
 
 ![Kernel Comparison Graph](phase4_kernel_comparison.png)
 *Figure 9: Kernel Comparison Graph — Visualizing the RBF kernel's superior ability to resolve non-linear semantic boundaries.*
@@ -149,7 +149,7 @@ The SAGE system employs a two-phase architecture: an offline training pipeline t
 
 ### 5.3 Evaluation Metrics
 Performance was evaluated using several statistical indicators:
-- **Weighted Metrics**: We calculated weighted averages for **Accuracy, Precision, and Recall**. This weighting is essential as it accounts for the relative size (support) of each difficulty set, ensuring that the dominant "Easy/Medium" classes do not overshadow the "Extra Hard" minority.
+- **Weighted Metrics**: We calculated weighted averages for **Accuracy, Precision, and Recall**. This weighting is essential to account for the relative class support of each difficulty tier, ensuring that the dominant "Easy" and "Medium" classes do not skew the overall performance metrics at the expense of the "Extra Hard" minority.
 - **Silhouette Score**: Used to measure cluster cohesion [3], this metric was extremely low at **0.0004** under aggressive compression (the initial 50-component baseline), indicating heavy overlapping and interlocked difficulty clusters. However, after the optimization phase (refer to Section 6.1.2) and scaling to the 220-component production manifold (retaining 90% variance of the 768D embeddings), this score improved to **0.0014**. While the score remains low due to semantic overlap between adjacent difficulty tiers (e.g., Medium vs. Hard), the improvement validates that higher manifold fidelity preserves stronger geometric separation.
 - **Heatmap Insights**: The generated similarity heatmap showed distinct diagonal blocks, indicating high intra-class similarity. Notably, the "Extra Hard" block appeared the most isolated, confirming it as a distinct semantic neighborhood. The heatmap also revealed that while difficulty drives separation, secondary clustering often occurs based on **thematic similarity**.
 
@@ -162,7 +162,7 @@ Performance was evaluated using several statistical indicators:
 #### 6.1.1 Initial Baseline Performance (Standardized at 50 Components)
 The first iteration of the classification layer utilized the 50-component subspace. While efficient, this configuration revealed critical limitations in handling high-complexity queries.
 
-**Statistical Imbalance**: The model initially applied equal weighting to all classes. Given the skewed distribution of the dataset (dominated by "Medium" and "Hard"), the minority "Extra Hard" class was poorly learned.
+**Statistical Imbalance**: The model initially applied equal weighting to all classes. Given the skewed distribution of the dataset (dominated by the "Medium" and "Hard" classes), the minority "Extra Hard" class was insufficiently modeled by the classifier.
 
 **Information Loss in the "Tail"**: At 50 components, only ~62.5% of the total variance was preserved. Analysis revealed that complex SQL keywords are often encoded in the "tail" of the embedding variance; by truncating at 50, these logical cues were discarded in favor of general semantic themes [5].
 
@@ -177,12 +177,12 @@ The first iteration of the classification layer utilized the 50-component subspa
 *Figure 13: Initial Metric Comparison — Precision and recall disparities across difficulty tiers in the aggressive compression phase.*
 
 - **Observation**: Performance was highly uneven. While the model achieved a respectable 80% precision for "Hard" queries, it hit a performance floor of **32% recall** for "Extra Hard" types.
-- **Conclusion**: Raw embeddings and aggressive compression were insufficient for production. The near-random performance on complex queries confirmed that class imbalance and information loss must be addressed simultaneously.
+- **Conclusion**: Raw embeddings and aggressive compression proved inadequate for production-grade query routing. The near-random performance on complex queries confirmed that class imbalance and information loss must be addressed simultaneously.
 
 #### 6.1.2 Optimization Phase: Increasing Manifold Fidelity
 To bridge the gap between English phrasing and SQL complexity, two primary changes were implemented:
 1. **Expansion of Dimensionality**: The subspace was expanded from 50 to **179 components**, increasing variance retention from 62.5% to **90%**. This preserved the subtle linguistic cues necessary for logical mapping.
-2. **Balanced Class Weighting**: Custom weights were introduced to the SVM to ensure the minority "Extra Hard" class was absorbed with higher sensitivity.
+2. **Balanced Class Weighting**: Custom weights were introduced to the SVM classifier to ensure the minority "Extra Hard" class was classified with higher sensitivity.
 
 #### 6.1.3 Final Production Evaluation (Optimized State)
 The optimized model was re-evaluated against the 179D baseline manifold (derived from the Spider dataset [1]) and subsequently scaled to the **220D production manifold** to maintain 90% variance retention for the 768D production embeddings.
@@ -198,7 +198,7 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 ![Optimized Metric Comparison](phase5_metric_comparison.png)
 *Figure 15: Optimized Metric Comparison — Uniform performance across all query classes in the optimized baseline manifold (179D).*
 
-- **Observation**: The "short bars" of the baseline were replaced by strong, uniform precision and recall across the board.
+- **Observation**: The performance disparities observed in the baseline model were resolved, yielding high and uniform precision and recall across all difficulty tiers.
 - **Conclusion**: By expanding the manifold to **179 components** (baseline) or **220 components** (production) to capture 90% variance, and balancing the classifier's sensitivity, the system became viable for production-grade routing.
 
 ### 6.2 Visualization Analysis
