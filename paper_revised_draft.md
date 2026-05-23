@@ -63,14 +63,24 @@ This expanded dataset ensures that the SVM-RBF router is trained not only on aca
 *Figure 2: Pinecone Data Distribution — Integration of 1,742 live enterprise queries with the Spider baseline manifold.*
 
 ### 3.3 EDA and Preprocessing
-Prior to model training, exploratory data analysis (EDA) and preprocessing were conducted on the baseline academic Spider dataset to characterize the underlying spatial geometry of the 384D embedding manifold and resolve inherent class representation imbalances. This phase was essential to validate that query difficulty levels align with distinct, separable semantic neighborhoods, and to construct the normalized feature and label matrices ($X$ and $y$) required to ensure stable, unbiased training for downstream classification layers.
+Prior to model training, exploratory data analysis (EDA) and preprocessing were conducted on the baseline academic Spider dataset to characterize the underlying spatial geometry of the 384D embedding manifold and resolve inherent class representation imbalances. This phase was essential to characterize the spatial relationship of query difficulty levels and determine whether they align with distinct semantic neighborhoods, and to construct the normalized feature and label matrices ($X$ and $y$) required to ensure stable, unbiased training for downstream classification layers.
 
 **Data Matrix Formatting**: The dataset was prepared in standard machine learning format [3]: a feature matrix $X$ (embeddings) and a label vector $y$ (difficulty classes). Matrix $X$ is used for training and testing, while $y$ serves as the ground truth for prediction.
 
-**Geometric Retrieval Theory**: By setting `normalize_embeddings=True` during the embedding process, we constrained vectors to a constant magnitude (unit length) [4]. Since vectors consist of both magnitude and direction, this normalization allows the model to prioritize **directional similarity**. Vectors pointing in the same direction indicate a similar difficulty level, providing a more robust metric than distance alone in high-dimensional space.
+**Geometric Retrieval Theory**: By setting `normalize_embeddings=True` during the embedding process, we constrained vectors to a constant magnitude (unit length) [4]. Since vectors consist of both magnitude and direction, this normalization allows the model to prioritize **directional similarity**. Vectors pointing in the same direction indicate a similar difficulty level, providing a more robust metric than distance alone in high-dimensional space, as visualized in Figure 3.
 
 ![Geometric Cluster Map](phase3_geometric_clusters.png)
-*Figure 3: Geometric Cluster Map — 2D projection confirming that query difficulty levels form distinct, separable semantic neighborhoods.*
+*Figure 3: Geometric Cluster Map (PCA vs. t-SNE)*
+
+**Geometric Cluster Observations**: Figure 3 presents two-dimensional projections of the query embedding space to visually check if SQL questions of similar difficulty actually sit close to each other in mathematical space. Each dot in the graphs represents a single SQL query embedding.
+
+**Principal Component Analysis (PCA)**: In the PCA projection (left), the X and Y axes represent Principal Component 1 and Principal Component 2, representing the orthogonal directions of maximum global variance. Visually, the PCA plot displays a single, continuous, and highly mixed cloud of points where Easy, Medium, Hard, and Extra Hard query embeddings overlap extensively. This indicates that global linear variance in the raw embeddings does not isolate query complexity.
+
+**t-Distributed Stochastic Neighbor Embedding (t-SNE)**: In the t-SNE projection (right), the X and Y axes represent t-SNE Dimension 1 and t-SNE Dimension 2, representing a non-linear coordinate space optimized to preserve local neighborhood distances. The t-SNE plot reveals that the embedding space is organized primarily by thematic content (e.g., domain topics such as flights, sports, or database schemas) rather than SQL complexity. While t-SNE projects queries into distinct local islands, almost every island contains a multi-colored mixture of all difficulty tiers, confirming that local non-linear groupings also fail to partition the space by complexity.
+
+**Linkage with Silhouette Score**: This heavy spatial overlap is mathematically validated by a global silhouette score of **0.0004** with respect to the difficulty labels. A silhouette score near zero confirms that the distances between different difficulty groups are indistinguishable from the distances within the same group in the raw space.
+
+This lack of geometric separability confirms that raw linguistic embeddings alone are insufficient signals for difficulty classification, directly motivating the use of a supervised classifier (SVM) to construct optimal separating hyperplanes on the reduced manifold.
 
 **Difficulty Classifier Logic**: We leveraged the point-based scoring system detailed in Section 3.2.1 to quantify complexity based on SQL tokens.
 
