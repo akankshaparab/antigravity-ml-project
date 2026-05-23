@@ -63,6 +63,8 @@ This expanded dataset ensures that the SVM-RBF router is trained not only on aca
 *Figure 2: Pinecone Data Distribution — Integration of 1,742 live enterprise queries with the Spider baseline manifold.*
 
 ### 3.3 EDA and Preprocessing
+Prior to model training, exploratory data analysis (EDA) and preprocessing were conducted on the baseline academic Spider dataset to characterize the underlying spatial geometry of the 384D embedding manifold and resolve inherent class representation imbalances. This phase was essential to validate that query difficulty levels align with distinct, separable semantic neighborhoods, and to construct the normalized feature and label matrices ($X$ and $y$) required to ensure stable, unbiased training for downstream classification layers.
+
 **Data Matrix Formatting**: The dataset was prepared in standard machine learning format [3]: a feature matrix $X$ (embeddings) and a label vector $y$ (difficulty classes). Matrix $X$ is used for training and testing, while $y$ serves as the ground truth for prediction.
 
 **Geometric Retrieval Theory**: By setting `normalize_embeddings=True` during the embedding process, we constrained vectors to a constant magnitude (unit length) [4]. Since vectors consist of both magnitude and direction, this normalization allows the model to prioritize **directional similarity**. Vectors pointing in the same direction indicate a similar difficulty level, providing a more robust metric than distance alone in high-dimensional space.
@@ -138,7 +140,7 @@ The SAGE system employs a two-phase architecture: an offline training pipeline t
 ### 5.3 Evaluation Metrics
 Performance was evaluated using several statistical indicators:
 - **Weighted Metrics**: We calculated weighted averages for **Accuracy, Precision, and Recall**. This weighting is essential as it accounts for the relative size (support) of each difficulty set, ensuring that the dominant "Easy/Medium" classes do not overshadow the "Extra Hard" minority.
-- **Silhouette Score**: This metric was used to measure cluster cohesion [3]. A positive silhouette score indicated that queries of the same type form coherent geometric clusters, validating the semantic separation of the difficulty labels.
+- **Silhouette Score**: Used to measure cluster cohesion [3], this metric was extremely low at **0.0004** under aggressive compression (the initial 50-component baseline), indicating heavy overlapping and interlocked difficulty clusters. However, after the optimization phase (refer to Section 6.1.2) and scaling to the 220-component production manifold (retaining 90% variance of the 768D embeddings), this score improved to **0.0014**. While the score remains low due to semantic overlap between adjacent difficulty tiers (e.g., Medium vs. Hard), the improvement validates that higher manifold fidelity preserves stronger geometric separation.
 - **Heatmap Insights**: The generated similarity heatmap showed distinct diagonal blocks, indicating high intra-class similarity. Notably, the "Extra Hard" block appeared the most isolated, confirming it as a distinct semantic neighborhood. The heatmap also revealed that while difficulty drives separation, secondary clustering often occurs based on **thematic similarity**.
 
 ![Similarity Heatmap](phase3_similarity_heatmap.png)
