@@ -155,7 +155,15 @@ The query routing system employs a two-phase architecture: an offline training p
 **Data Split**: The training pipeline utilizes an 80:20 train-test partition, applying a stratified sampling technique to preserve consistent difficulty tier proportions across both splits.
 
 ### 5.2 Hyperparameter Settings
-**Elbow Zone Analysis**: Through sensitivity analysis, the optimal performance-to-cost ratio was identified to occur in an "Elbow Zone" between 30 and 50 dimensions for the baseline 384-dimensional space. However, for the 768-dimensional production environment, sensitivity analysis results are visualized in Figure 10, detailing how classifier performance scales across varying dimensions and regularization parameters:
+**Elbow Zone Analysis**: Through sensitivity analysis, the optimal performance-to-cost ratio was identified to occur in an "Elbow Zone" between 30 and 50 dimensions for the baseline 384-dimensional space. The baseline sensitivity analysis results are visualized in Figure 10:
+- **X-Axis**: The X-axis represents the number of principal components kept as input, ranging from 5 to 150.
+- **Y-Axis**: The Y-axis represents the metric score (ranging from 0.50 to 0.80), evaluating the classifier's performance across Accuracy, Precision, and Recall.
+- **Curve Progressions**: The Accuracy, Precision, and Recall curves follow nearly identical trajectories, showing a very steep initial increase from 5 components (Score $\approx 0.50$) to 10 components (Score $\approx 0.61$), continuing with a moderately steep rise to 30 components (Score $\approx 0.70$), and transitioning into a gradual rise beyond 30 components (reaching $\approx 0.72$ at 50 components and plateauing near $\approx 0.785$ at 150 components).
+
+![Baseline Sensitivity Analysis](phase4_sensitivity_analysis.png)
+*Figure 10: Baseline Sensitivity Analysis*
+
+However, for the 768-dimensional production environment, sensitivity analysis results are visualized in Figure 11, detailing how classifier performance scales across varying dimensions and regularization parameters:
 - **X-Axes**:
   - For the dimensionality plot, the X-axis represents the number of PCA components.
   - For the regularization plot, the X-axis represents the SVM regularization parameter $C$ on a logarithmic scale.
@@ -166,16 +174,16 @@ The query routing system employs a two-phase architecture: an offline training p
   - The regularization curve exhibits a steep initial increase as $C$ increases from 0.1 to 10 (F1-score $\approx 0.871$), after which performance plateaus.
 
 ![SVM Sensitivity Analysis (Production)](produc_vers/sensitivity_results.png)
-*Figure 10: SVM Sensitivity Results*
+*Figure 11: SVM Sensitivity Results*
 
 ### 5.3 Evaluation Metrics
 Performance was evaluated using several statistical indicators:
 - **Weighted Metrics**: Weighted averages for accuracy, precision, and recall were calculated. This weighting is essential to account for the relative class support of each difficulty tier, ensuring that the dominant 'Easy' and 'Medium' classes do not skew the overall performance metrics at the expense of the 'Extra Hard' minority.
 - **Silhouette Score**: Used to measure cluster cohesion [3], this metric was extremely low at **0.0004** under aggressive compression (the initial 50-component baseline), indicating heavy overlapping and interlocked difficulty clusters. However, after the optimization phase (refer to Section 6.1.2) and scaling to the 220-component production manifold (retaining 90% variance of the 768D embeddings), this score improved to **0.0014**. While the score remains low due to semantic overlap between adjacent difficulty tiers (e.g., 'Medium' vs. 'Hard'), the improvement validates that higher manifold fidelity preserves stronger geometric separation.
-- **Heatmap**: The generated similarity heatmap (Figure 11) shows distinct diagonal blocks, indicating high intra-class similarity. Notably, the 'Extra Hard' block appears the most isolated, confirming it as a distinct semantic neighborhood. The heatmap also reveals that while difficulty drives separation, secondary clustering often occurs based on thematic similarity.
+- **Heatmap**: The generated similarity heatmap (Figure 12) shows distinct diagonal blocks, indicating high intra-class similarity. Notably, the 'Extra Hard' block appears the most isolated, confirming it as a distinct semantic neighborhood. The heatmap also reveals that while difficulty drives separation, secondary clustering often occurs based on thematic similarity.
 
 ![Similarity Heatmap](phase3_similarity_heatmap.png)
-*Figure 11: Similarity Heatmap*
+*Figure 12: Similarity Heatmap*
 
 ## 6 Results and Discussion
 ### 6.1 Benchmark Results
@@ -190,14 +198,14 @@ The first iteration of the classification layer utilized the 50-component subspa
 **Evaluation Visuals (Initial Baseline Model)**:
 
 ![Initial Confusion Matrix](pre_vers_confu_matr.png)
-*Figure 12: Initial Confusion Matrix*
+*Figure 13: Initial Confusion Matrix*
 
-- **Observation**: As shown in the initial confusion matrix (Figure 12), the model struggled significantly with 'Extra Hard' queries (only 43 out of 132 correct). There was a noticeable pull toward the 'Medium' class, indicating a systemic bias toward predicting the majority categories.
+- **Observation**: As shown in the initial confusion matrix (Figure 13), the model struggled significantly with 'Extra Hard' queries (only 43 out of 132 correct). There was a noticeable pull toward the 'Medium' class, indicating a systemic bias toward predicting the majority categories.
 
 ![Initial Metric Comparison](pre_vers_metric_comp.png)
-*Figure 13: Initial Metric Comparison*
+*Figure 14: Initial Metric Comparison*
 
-- **Observation**: As visualized in the metric comparison (Figure 13), performance was highly uneven. While the model achieved a respectable 80% precision for 'Hard' queries, it hit a performance floor of **32% recall** for 'Extra Hard' types.
+- **Observation**: As visualized in the metric comparison (Figure 14), performance was highly uneven. While the model achieved a respectable 80% precision for 'Hard' queries, it hit a performance floor of **32% recall** for 'Extra Hard' types.
 - **Conclusion**: Raw embeddings and aggressive compression proved inadequate for production-grade query routing. The near-random performance on complex queries confirmed that class imbalance and information loss must be addressed simultaneously.
 
 #### 6.1.2 Optimization Phase: Increasing Manifold Fidelity
@@ -211,15 +219,15 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 **Evaluation Visuals (Optimized Baseline Model)**:
 
 ![Optimized Confusion Matrix](phase5_confusion_matrix.png)
-*Figure 14: Optimized Confusion Matrix*
+*Figure 15: Optimized Confusion Matrix*
 
-- **Observation**: As shown in the optimized confusion matrix (Figure 14), the classifier achieved strong diagonal performance across all four classes. The most notable remaining confusion was a minor overlap between 'Medium' and 'Easy,' suggesting a high semantic similarity between adjacent complexity levels.
+- **Observation**: As shown in the optimized confusion matrix (Figure 15), the classifier achieved strong diagonal performance across all four classes. The most notable remaining confusion was a minor overlap between 'Medium' and 'Easy,' suggesting a high semantic similarity between adjacent complexity levels.
 - **Success with Complexity**: Accuracy on 'Extra Hard' queries rose to **98 out of 132**, validating that the model successfully learned structural differences.
 
 ![Optimized Metric Comparison](phase5_metric_comparison.png)
-*Figure 15: Optimized Metric Comparison*
+*Figure 16: Optimized Metric Comparison*
 
-- **Observation**: As illustrated in the optimized metric comparison (Figure 15), the performance disparities observed in the baseline model were resolved, yielding high and uniform precision and recall across all difficulty tiers.
+- **Observation**: As illustrated in the optimized metric comparison (Figure 16), the performance disparities observed in the baseline model were resolved, yielding high and uniform precision and recall across all difficulty tiers.
 - **Conclusion**: By expanding the manifold to **179 components** (baseline) or **220 components** (production) to capture 90% variance, and balancing the classifier's sensitivity, the system became viable for production-grade routing.
 
 ### 6.2 Visualization Analysis
@@ -228,9 +236,9 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 **Methodological Validation**: These comparative results empirically validate the proposed routing architecture. By transitioning from the baseline Spider embeddings to the higher-dimensional production embeddings, the system achieved a **10-point increase in F1-Score** (rising from 0.71 to 0.81). This performance jump indicates that higher-dimensional production embeddings provide superior geometric separability for the SVM classifier, confirming the routing layer as a highly viable and robust solution for live enterprise traffic.
 
 ![Live vs. Spider Distribution Comparison](produc_vers/live_vs_spider_comparison.png)
-*Figure 16: Live vs. Baseline Projection — Manifold comparison confirming academic benchmark compatibility with production traffic.*
+*Figure 17: Live vs. Baseline Projection — Manifold comparison confirming academic benchmark compatibility with production traffic.*
 
-**Distribution Comparison Analysis**: The manifold comparison in Figure 16 evaluates the distribution of the academic Spider baseline queries [1] against live Pinecone production database queries:
+**Distribution Comparison Analysis**: The manifold comparison in Figure 17 evaluates the distribution of the academic Spider baseline queries [1] against live Pinecone production database queries:
 - **X-Axis (Sample Spread)**: The X-axis represents the sample count, with queries ordered along the axis to visualize their semantic density and distribution.
 - **Y-Axis (Semantic Deviation)**: The Y-axis measures the relative semantic position using a similarity score, representing how far each query vector deviates from the mean query vector.
 - **Core Overlap (L1-Dense Zone)**: The extensive overlap demonstrates a 90% semantic match between the Spider baseline [1] and live enterprise traffic, verifying that academic benchmarks are highly representative of production language styles.
@@ -245,9 +253,9 @@ The empirical results provide a robust, evidence-backed justification for the de
     - **Tier 2 (High Logic)**: 'Hard' and 'Extra Hard' queries are strategically directed to **Claude Haiku [12]**, ensuring that premium compute is only utilized for tasks requiring advanced logical reasoning.
 
 ![Online Query Routing Architecture](produc_vers/online_routing_flowchart_updated.png)
-*Figure 17: Online Query Routing Architecture*
+*Figure 18: Online Query Routing Architecture*
 
-The real-time execution flow of this query routing layer is shown in Figure 17. For every incoming query, the system generates its normalized embedding [2], reduces its dimensions using the pre-trained PCA [3] components, and classifies its complexity to route it to free models via OpenRouter [13] (Tier 1) or Claude Haiku [12] (Tier 2). Simultaneously, a Pinecone database [8] similarity query serves as an out-of-distribution (OOD) safety check to guard against semantic outliers.
+The real-time execution flow of this query routing layer is shown in Figure 18. For every incoming query, the system generates its normalized embedding [2], reduces its dimensions using the pre-trained PCA [3] components, and classifies its complexity to route it to free models via OpenRouter [13] (Tier 1) or Claude Haiku [12] (Tier 2). Simultaneously, a Pinecone database [8] similarity query serves as an out-of-distribution (OOD) safety check to guard against semantic outliers.
 
 - **Infrastructure ROI and Performance**: The discovery of significant signal redundancy within the production manifold allows for the elimination of semantic noise. This reduction directly translates to **accelerated similarity search retrieval** and a **70.7% reduction in database storage size** (from 37.2 MB to 10.9 MB), ensuring the system remains responsive at production scales while minimizing cloud overhead (see Table 1).
 
@@ -261,14 +269,14 @@ The real-time execution flow of this query routing layer is shown in Figure 17. 
 #### 6.3.2 Identifying the Semantic Gap
 Analysis of the misclassifications reveals that the core challenge lies in the model's sensitivity: it is naturally more attuned to **semantic themes** (the subject of the query) than to **keyword complexity** (the structure of the query). When aggressive PCA compression is applied, the structural logic is the first to be discarded as "noise" [5]. By expanding the baseline architecture to 179 components and applying balanced weights, the gap was successfully bridged between the natural language phrasing and the underlying SQL logical structure.
 
-**Interpretation of the 768D Manifold Projection**: In the 2D projection of the 768D embedding space (Figure 18), the axes are defined as follows:
+**Interpretation of the 768D Manifold Projection**: In the 2D projection of the 768D embedding space (Figure 19), the axes are defined as follows:
 - **X-Axis**: The first principal component (PC1), representing the direction of maximum variance in the 768-dimensional embedding space.
 - **Y-Axis**: The second principal component (PC2), representing the orthogonal direction of the second-highest variance in the 768-dimensional embedding space.
 
 This linear transformation projects the high-dimensional space into a visualizable plane—analogous to shining a light on a 768D object and observing its 2D shadow. Based on the complex, overlapping shapes observed in this scatter plot, a non-linear estimator was required to draw effective boundaries between the difficulty groups, justifying the selection of a kernel-based approach [11].
 
 ![Semantic Blind Spot Map](produc_vers/blind_spot_map.png)
-*Figure 18: Semantic Blind Spot Map — Visualizing geometric regions where structural logic is susceptible to high-dimensional semantic noise.*
+*Figure 19: Semantic Blind Spot Map — Visualizing geometric regions where structural logic is susceptible to high-dimensional semantic noise.*
 
 ## 7 Conclusion
 The research demonstrates that while an initial elbow point of **50 PCA components** captures the semantic core of Text-to-SQL queries, an expansion to **179 components** (baseline) or **220 components** (production) is necessary to preserve the logical "tail" required for complex query classification. The resulting SVM-RBF model provides a principled, cost-efficient foundation for automated enterprise query routing.
