@@ -174,7 +174,7 @@ However, for the 768-dimensional production environment, sensitivity analysis re
   - The regularization curve exhibits a steep initial increase as $C$ increases from 0.1 to 10 (F1-score $\approx 0.871$), after which performance plateaus.
 
 ![SVM Sensitivity Analysis (Production)](produc_vers/sensitivity_results.png)
-*Figure 11: SVM Sensitivity Results*
+*Figure 11: Production Sensitivity Results*
 
 ### 5.3 Evaluation Metrics
 Performance was evaluated using several statistical indicators:
