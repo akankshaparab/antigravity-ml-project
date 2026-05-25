@@ -106,6 +106,7 @@ The query routing system employs a two-phase architecture: an offline training p
 
 ### 4.1 Dimensionality Reduction & Selection
 To address the computational constraints of real-time query routing, the high-dimensional query embeddings must be projected onto a lower-dimensional manifold. This subsection details the mathematical selection of the most suitable dimensionality reduction technique, benchmarks various Principal Component Analysis (PCA) variants, and characterises the intrinsic dimensionality and semantic noise of both the baseline and production embedding spaces.
+
 **Benchmarking Methodology**: This study evaluated four PCA variants (Standard, Incremental, Sparse, and Kernel [14]) to identify the most efficient method for production scaling. From the wide range of available dimensionality reduction methods, these four were selected because they represent the fundamental mathematical approaches to modeling different data manifolds: linear vs. non-linear [14] and dense vs. sparse data structures. The benchmarking execution measured the computational duration of the dimensionality reduction transform, confirming that Standard PCA offered the optimal balance between inference speed and variance retention [3] (see Figure 5).
 
 ![PCA Variant Comparison](pca_variant_comparison.png)
@@ -142,6 +143,7 @@ To address the computational constraints of real-time query routing, the high-di
 
 ### 4.2 Query Complexity Classification
 Following the unsupervised compression of the embedding manifold, a supervised classification layer is required to partition the projected coordinates into discrete complexity tiers. This subsection outlines the formulation of the Support Vector Machine (SVM) classifier, evaluates the performance of different kernel functions in mapping the interlocked boundaries, and explains the class-weighting optimization applied to resolve dataset imbalances.
+
 **Kernel Comparison and Selection**: A parallel performance comparison of RBF, Linear [11], and Polynomial [11] kernels was conducted to determine the optimal SVM decision boundary (see Figure 9).
 - **Linear Kernel Inadequacy**: Visual inspection of the projection scatter plots indicates that difficulty categories are not linearly separable [11], rendering linear decision boundaries highly error-prone.
 - **Polynomial Kernel Inconsistency**: While the Polynomial kernel [11] can model complex interfaces, it is highly sensitive to hyperparameter tuning, computationally slower, and performs inconsistently when scaled across varying dimensions on live traffic.
@@ -248,6 +250,7 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 
 ### 6.2 Visualization Analysis
 To visually validate the geometric properties of the vector spaces, high-dimensional query embeddings were projected onto two-dimensional planes using linear and non-linear techniques. This subsection presents the comparative visualization of these projections, analyzing the semantic separation of difficulty tiers and verifying the overlap between baseline benchmarks and live enterprise traffic.
+
 **PCA vs. t-SNE**: PCA was used to capture global variance (difficulty mapping), while t-SNE [9] was employed to capture local thematic neighborhoods.
 
 **Methodological Validation**: These comparative results empirically validate the proposed routing architecture. By transitioning from the baseline Spider embeddings to the higher-dimensional production embeddings, the system achieved a **10-point increase in F1-Score** (rising from 0.71 to 0.81). This performance jump indicates that higher-dimensional production embeddings provide superior geometric separability for the SVM classifier, confirming the routing layer as a highly viable and robust solution for live enterprise traffic.
