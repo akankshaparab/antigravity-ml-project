@@ -247,7 +247,7 @@ The empirical results provide a robust, evidence-backed justification for the de
 ![Online Query Routing Architecture](produc_vers/online_routing_flowchart_updated.png)
 *Figure 17: Online Query Routing Architecture*
 
-The real-time execution flow of this query routing layer is shown in Figure 17. For every incoming query, the system generates its normalized embedding [2], reduces its dimensions using the pre-trained PCA [3] components, and classifies its complexity to route it to free models (such as those in the Gemini family [7]) via OpenRouter [13] (Tier 1) or Claude Haiku [12] (Tier 2). Simultaneously, a Pinecone database [8] similarity query serves as an out-of-distribution (OOD) safety check to guard against semantic outliers.
+The real-time execution flow of this query routing layer is shown in Figure 17. For every incoming query, the system generates its normalized embedding [2], reduces its dimensions using the pre-trained PCA [3] components, and classifies its complexity to route it to free models via OpenRouter [13] (Tier 1) or Claude Haiku [12] (Tier 2). Simultaneously, a Pinecone database [8] similarity query serves as an out-of-distribution (OOD) safety check to guard against semantic outliers.
 
 - **Infrastructure ROI and Performance**: The discovery of significant signal redundancy within the production manifold allows for the elimination of semantic noise. This reduction directly translates to **accelerated similarity search retrieval** and a **70.7% reduction in database storage size** (from 37.2 MB to 10.9 MB), ensuring the system remains responsive at production scales while minimizing cloud overhead (see Table 1).
 
