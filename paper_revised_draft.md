@@ -105,6 +105,7 @@ The query routing system employs a two-phase architecture: an offline training p
 **Complementary Roles of PCA and SVM**: The proposed routing architecture employs Principal Component Analysis (PCA) and Support Vector Machines (SVM) [11] for distinct, complementary roles in the optimization pipeline. PCA functions as an unsupervised dimensionality reduction step that filters high-dimensional semantic noise (e.g., phrasing variances, minor punctuation) [5] by extracting the orthogonal components of maximum variance. This yields a dense, lower-dimensional manifold that minimizes storage size and search latency. SVM then operates as a supervised classification engine, taking these compressed representation coordinates to construct optimal separating hyperplanes between query difficulty categories, using a non-linear kernel to resolve complex decision boundaries [11].
 
 ### 4.1 Dimensionality Reduction & Selection
+To address the computational constraints of real-time query routing, the high-dimensional query embeddings must be projected onto a lower-dimensional manifold. This subsection details the mathematical selection of the most suitable dimensionality reduction technique, benchmarks various Principal Component Analysis (PCA) variants, and characterises the intrinsic dimensionality and semantic noise of both the baseline and production embedding spaces.
 **Benchmarking Methodology**: This study evaluated four PCA variants (Standard, Incremental, Sparse, and Kernel [14]) to identify the most efficient method for production scaling. From the wide range of available dimensionality reduction methods, these four were selected because they represent the fundamental mathematical approaches to modeling different data manifolds: linear vs. non-linear [14] and dense vs. sparse data structures. The benchmarking execution measured the computational duration of the dimensionality reduction transform, confirming that Standard PCA offered the optimal balance between inference speed and variance retention [3] (see Figure 5).
 
 ![PCA Variant Comparison](pca_variant_comparison.png)
@@ -140,6 +141,7 @@ The query routing system employs a two-phase architecture: an offline training p
 *Figure 8: Production Scree Plot*
 
 ### 4.2 Query Complexity Classification
+Following the unsupervised compression of the embedding manifold, a supervised classification layer is required to partition the projected coordinates into discrete complexity tiers. This subsection outlines the formulation of the Support Vector Machine (SVM) classifier, evaluates the performance of different kernel functions in mapping the interlocked boundaries, and explains the class-weighting optimization applied to resolve dataset imbalances.
 **Kernel Comparison and Selection**: A parallel performance comparison of RBF, Linear [11], and Polynomial [11] kernels was conducted to determine the optimal SVM decision boundary (see Figure 9).
 - **Linear Kernel Inadequacy**: Visual inspection of the projection scatter plots indicates that difficulty categories are not linearly separable [11], rendering linear decision boundaries highly error-prone.
 - **Polynomial Kernel Inconsistency**: While the Polynomial kernel [11] can model complex interfaces, it is highly sensitive to hyperparameter tuning, computationally slower, and performs inconsistently when scaled across varying dimensions on live traffic.
@@ -165,6 +167,7 @@ To evaluate the empirical performance of the proposed query routing layer, a ser
 **Subspace Projection**: The PCA transforms (including Standard, Incremental, Sparse, and Kernel variants) were fitted exclusively on the training partition of the matrix $X$ to prevent data leakage. The fitted transformation was then applied to project both the training and test matrices into the target lower-dimensional subspaces.
 
 ### 5.2 Hyperparameter Settings
+The performance and execution latency of the joint PCA-SVM pipeline are highly dependent on the hyperparameter configurations selected during training. This subsection outlines the sensitivity analysis conducted to optimize the number of retained principal components and the SVM regularization parameter $C$, establishing the empirical boundaries of the optimal efficiency zone.
 **Elbow Zone Analysis**: Through sensitivity analysis, the optimal performance-to-cost ratio was identified to occur in an "Elbow Zone" between 30 and 50 dimensions for the baseline 384-dimensional space. The baseline sensitivity analysis results are visualized in Figure 10:
 - **X-Axis**: The X-axis represents the number of principal components kept as input, ranging from 5 to 150.
 - **Y-Axis**: The Y-axis represents the metric score (ranging from 0.50 to 0.80), evaluating the classifier's performance across Accuracy, Precision, and Recall.
@@ -196,7 +199,10 @@ Performance was evaluated using several statistical indicators:
 *Figure 12: Similarity Heatmap*
 
 ## 6 Results and Discussion
+This section presents the empirical findings of the joint PCA-SVM query routing framework. The benchmark performance of the classifier is analyzed under aggressive and optimized compression settings, the spatial layout of the embedding manifolds is visually inspected, and the technical implications of these results for production RAG architectures are discussed.
+
 ### 6.1 Benchmark Results
+The classification accuracy, precision, and recall of the query router were benchmarked across two distinct development phases. First, an initial baseline model was evaluated under aggressive dimensionality reduction (50 components). Second, an optimized model was developed by expanding the subspace projection to preserve higher manifold fidelity and introducing class-balanced optimization.
 
 #### 6.1.1 Initial Baseline Performance (Standardized at 50 Components)
 The first iteration of the classification layer utilized the 50-component subspace. While efficient, this configuration revealed critical limitations in handling high-complexity queries.
@@ -241,6 +247,7 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 - **Conclusion**: By expanding the manifold to **179 components** (baseline) or **220 components** (production) to capture 90% variance, and balancing the classifier's sensitivity, the system became viable for production-grade routing.
 
 ### 6.2 Visualization Analysis
+To visually validate the geometric properties of the vector spaces, high-dimensional query embeddings were projected onto two-dimensional planes using linear and non-linear techniques. This subsection presents the comparative visualization of these projections, analyzing the semantic separation of difficulty tiers and verifying the overlap between baseline benchmarks and live enterprise traffic.
 **PCA vs. t-SNE**: PCA was used to capture global variance (difficulty mapping), while t-SNE [9] was employed to capture local thematic neighborhoods.
 
 **Methodological Validation**: These comparative results empirically validate the proposed routing architecture. By transitioning from the baseline Spider embeddings to the higher-dimensional production embeddings, the system achieved a **10-point increase in F1-Score** (rising from 0.71 to 0.81). This performance jump indicates that higher-dimensional production embeddings provide superior geometric separability for the SVM classifier, confirming the routing layer as a highly viable and robust solution for live enterprise traffic.
@@ -255,6 +262,7 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 - **Outliers (Right Tail)**: The right side of the plot captures unusual, production-specific queries (outliers) that represent enterprise-specific nomenclature not present in academic datasets.
 
 ### 6.3 Discussion
+This subsection discusses the broader engineering and data-level implications of the empirical findings. The infrastructure cost savings and query latency improvements enabled by index compression are evaluated, the real-time execution of the routing layer is outlined, and the way spatial gap analysis can be used to identify data coverage gaps in production databases is described.
 #### 6.3.1 Implications for Production Architecture
 The empirical findings of this study have direct, actionable implications for the design and optimization of production-scale RAG platforms, such as Sumvec's Data Analyst system. The joint PCA-SVM framework addresses key engineering trade-offs between retrieval latency, storage costs, and LLM inference expenses.
 
