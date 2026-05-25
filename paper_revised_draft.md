@@ -205,7 +205,7 @@ To bridge the gap between English phrasing and SQL complexity, two primary chang
 1. **Expansion of Dimensionality**: The subspace was expanded from 50 to **179 components**, increasing variance retention from 62.5% to **90%**. This preserved the subtle linguistic cues necessary for logical mapping.
 2. **Balanced Class Weighting**: Custom class weights (0.89 for 'Easy', 0.69 for 'Medium', 0.86 for 'Hard', and 3.67 for 'Extra Hard') were introduced to the SVM classifier to ensure the minority 'Extra Hard' class was classified with higher sensitivity.
 
-#### 6.1.3 Final Production Evaluation (Optimized State)
+#### 6.1.3 Final Baseline Evaluation (Optimized State)
 The optimized model was re-evaluated against the 179D baseline manifold (derived from the Spider dataset [1]) and subsequently scaled to the **220D production manifold** to maintain 90% variance retention for the 768D production embeddings.
 
 **Evaluation Visuals (Optimized Baseline Model)**:
