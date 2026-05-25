@@ -200,6 +200,10 @@ Performance was evaluated using several statistical indicators:
 ![Similarity Heatmap](phase3_similarity_heatmap.png)
 *Figure 12: Similarity Heatmap*
 
+- **Axes Definitions**:
+  * **X-Axis**: Represents the individual query samples sorted sequentially by difficulty tier.
+  * **Y-Axis**: Represents the identical set of query samples sorted in the same sequential order, illustrating pairwise cosine similarity.
+
 ## 6 Results and Discussion
 This section presents the empirical findings of the joint PCA-SVM query routing framework. The benchmark performance of the classifier is analyzed under aggressive and optimized compression settings, the spatial layout of the embedding manifolds is visually inspected, and the technical implications of these results for production RAG architectures are discussed.
 
@@ -218,12 +222,19 @@ The first iteration of the classification layer utilized the 50-component subspa
 ![Initial Confusion Matrix](pre_vers_confu_matr.png)
 *Figure 13: Initial Confusion Matrix*
 
+- **Axes Definitions**:
+  * **X-Axis**: Represents the predicted difficulty classes ('Easy', 'Medium', 'Hard', and 'Extra Hard').
+  * **Y-Axis**: Represents the actual ground-truth difficulty classes ('Easy', 'Medium', 'Hard', and 'Extra Hard').
 - **Baseline Complexity Degradation**: As shown in the initial confusion matrix (Figure 13), the model struggled significantly with 'Extra Hard' queries (only 43 out of 132 correct). There was a noticeable pull toward the 'Medium' class, indicating a systemic bias toward predicting the majority categories.
 - **Misclassification Directionality**: Although 'Extra Hard' queries are frequently misclassified under baseline settings, they are almost never mistaken for 'Easy' queries (only 3 instances), instead bleeding primarily into adjacent 'Medium' (53 instances) and 'Hard' (33 instances) categories. This indicates that the compressed embedding space preserves a coarse, ordinal topology of complexity, even if it fails to resolve adjacent decision boundaries.
 
 ![Initial Metric Comparison](pre_vers_metric_comp.png)
 *Figure 14: Initial Metric Comparison*
 
+- **Axes and Legend Definitions**:
+  * **X-Axis**: Represents the query complexity classes ('Easy', 'Medium', 'Hard', and 'Extra Hard').
+  * **Y-Axis**: Represents the metric score (ranging from 0.0 to 1.0).
+  * **Legend (Colors)**: Represents the individual classification metrics (Precision, Recall, and F1-Score).
 - **Baseline Recall Floor**: As visualized in the metric comparison (Figure 14), performance was highly uneven. While the model achieved a respectable 80% precision for 'Hard' queries, it hit a performance floor of **32% recall** for 'Extra Hard' types.
 - **Easy Class Stability**: In contrast to the high-complexity tiers, the 'Easy' class maintains relatively stable precision and recall under aggressive compression. This suggests that simpler query structures (single-table queries without complex clauses) occupy a distinct, less-dispersed geometric region that is highly resilient to the information loss in the tail of the PCA variance.
 - **Precision-Recall Disparity**: The precision for 'Extra Hard' queries is significantly higher than its recall. This disparity reveals that the baseline classifier was extremely conservative, predicting 'Extra Hard' only for the most geometrically distinct examples, while missing the majority of them due to decision boundary skew toward the majority classes.
@@ -242,6 +253,9 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 ![Optimized Confusion Matrix](phase5_confusion_matrix.png)
 *Figure 15: Optimized Confusion Matrix*
 
+- **Axes Definitions**:
+  * **X-Axis**: Represents the predicted difficulty classes ('Easy', 'Medium', 'Hard', and 'Extra Hard').
+  * **Y-Axis**: Represents the actual ground-truth difficulty classes ('Easy', 'Medium', 'Hard', and 'Extra Hard').
 - **Optimized Diagonal Performance**: As shown in the optimized confusion matrix (Figure 15), the classifier achieved strong diagonal performance across all four classes. The most notable remaining confusion was a minor overlap between 'Medium' and 'Easy,' suggesting a high semantic similarity between adjacent complexity levels.
 - **Success with Complexity**: Accuracy on 'Extra Hard' queries rose to **98 out of 132**, validating that the model successfully learned structural differences.
 - **Error Symmetry**: The off-diagonal misclassifications in the optimized confusion matrix are distributed symmetrically (e.g., minor mutual bleed between 'Easy' and 'Medium', and between 'Hard' and 'Extra Hard'). This symmetry mathematically validates the effectiveness of the custom class-weighting penalties, which penalized 'Extra Hard' errors approximately 5.3 times more severely than 'Medium' to center the decision boundaries in overlapping zones.
@@ -249,6 +263,10 @@ The optimized model was re-evaluated against the 179D baseline manifold (derived
 ![Optimized Metric Comparison](phase5_metric_comparison.png)
 *Figure 16: Optimized Metric Comparison*
 
+- **Axes and Legend Definitions**:
+  * **X-Axis**: Represents the query complexity classes ('Easy', 'Medium', 'Hard', and 'Extra Hard').
+  * **Y-Axis**: Represents the metric score (ranging from 0.0 to 1.0).
+  * **Legend (Colors)**: Represents the individual classification metrics (Precision, Recall, and F1-Score).
 - **Optimized Uniform Performance**: As illustrated in the optimized metric comparison (Figure 16), the performance disparities observed in the baseline model were resolved, yielding high and uniform precision and recall across all difficulty tiers.
 - **Metric Harmonization**: The precision, recall, and F1-scores for individual classes converged to a stable, balanced profile. By expanding the subspace projection to preserve 90% variance (179 components), the subtle structural and grammatical features required to distinguish adjacent complexity classes were successfully recovered, achieving balanced performance without degrading the accuracy of the majority classes.
 - **Manifold Scaling Viability**: By expanding the manifold to **179 components** (baseline) or **220 components** (production) to capture 90% variance, and balancing the classifier's sensitivity, the system became viable for production-grade routing.
