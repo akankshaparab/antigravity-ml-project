@@ -55,10 +55,10 @@ The total accumulated score maps queries into discrete difficulty tiers:
 
 #### 3.2.2 Baseline Dataset (Spider)
 The distribution of query difficulty (post-rebalancing) for the academic Spider dataset is as follows, as illustrated in Figure 1:
-- **'Easy'**: 2,710
-- **'Medium'**: 3,496
-- **'Hard'**: 2,826
-- **'Extra Hard'**: 661
+- **Easy**: 2,710
+- **Medium**: 3,496
+- **Hard**: 2,826
+- **Extra Hard**: 661
 
 ![Spider Class Distribution](spider_class_distribution.png)
 *Figure 1: Spider Class Distribution — Visualizing the inherent data imbalance toward Medium and Hard complexity levels.*
