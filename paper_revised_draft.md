@@ -54,11 +54,11 @@ The complexity classification of queries in both datasets is determined using a 
 - Set operators such as `INTERSECT`, `UNION`, and `EXCEPT` contribute $+2$ points each.
 - Nested subqueries (multiple `SELECT` statements) contribute $+2$ points each.
 
-The total accumulated score maps queries into discrete difficulty tiers:
+The total accumulated score maps queries into discrete difficulty tiers under the initial labeling heuristic:
 - **0 points**: Easy
-- **1 point**: Medium
-- **2–3 points**: Hard
-- **>3 points**: Extra Hard
+- **1–2 points**: Medium
+- **3–4 points**: Hard
+- **>4 points**: Extra Hard
 
 #### 3.2.2 Baseline Dataset (Spider)
 The distribution of query difficulty (post-rebalancing) for the academic Spider dataset is as follows, as illustrated in Figure 1:
