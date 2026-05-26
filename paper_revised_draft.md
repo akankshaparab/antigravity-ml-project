@@ -212,7 +212,7 @@ where $\gamma > 0$ represents the kernel scale parameter that governs the radius
 
 ## 5 Experiments
 ### 5.1 Experimental Configuration
-To evaluate the empirical performance of the proposed query routing layer, a series of controlled experiments were executed. The experimental pipeline was designed to benchmark classification accuracy and latency under various dimensionality reduction and kernel settings. The pipeline was implemented in Python 3.10 using the Scikit-learn library [3] for PCA and SVM operations, and the Sentence-Transformers library for embedding generation. All experiments were conducted on a standardized computing environment utilizing an Intel Xeon CPU with 32 GB of RAM to ensure reproducibility.
+To evaluate the empirical performance of the proposed query routing layer, a series of controlled experiments were executed. The experimental pipeline was designed to benchmark classification accuracy and latency under various dimensionality reduction and kernel settings. The pipeline was implemented in Python 3.10 using the Scikit-learn library [3] for PCA and SVM operations, and the Sentence-Transformers library [37] for embedding generation. All experiments were conducted on a standardized computing environment utilizing an Intel Xeon CPU with 32 GB of RAM to ensure reproducibility.
 
 **Embedding Models**: The embedding generation pipeline was implemented using the Hugging Face Sentence-Transformers library [37]. The pre-trained models were loaded and executed in accordance with the 384-dimensional baseline and 768-dimensional production specifications detailed in Section 3.1, maintaining uniform checkpoint configurations across all evaluation splits.
 
