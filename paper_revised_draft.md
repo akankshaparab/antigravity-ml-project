@@ -313,9 +313,7 @@ To explain the performance gains and errors reported in Section 6.1, addressing 
 - **Metric Harmonization (Figure 16)**: The precision, recall, and F1-scores for individual classes converged to a stable, balanced profile. By expanding the subspace projection to preserve 90% variance (179 components), the subtle structural and grammatical features required to distinguish adjacent complexity classes were successfully recovered, achieving balanced performance without degrading the accuracy of the majority classes.
 
 #### 6.2.2 Manifold Projections and Distribution Comparison
-To inspect the high-dimensional structures directly, two-dimensional projections of the query embedding space were analyzed.
-
-**PCA vs. t-SNE**: PCA was used to capture global variance (difficulty mapping), while t-SNE [9] was employed to capture local thematic neighborhoods.
+To inspect the high-dimensional structures directly, two-dimensional projections of the query embedding space were analyzed, utilizing PCA to capture global variance for difficulty mapping and t-SNE [9] to isolate local thematic neighborhoods.
 
 **Methodological Validation**: These comparative results empirically validate the proposed routing architecture. By transitioning from the baseline Spider embeddings to the higher-dimensional production embeddings, the system achieved superior geometric separability for the SVM classifier. As visually demonstrated by the tighter clustering in Figure 19, this manifold fidelity directly corresponds to the **10-point increase in F1-Score** (rising from 0.71 to 0.81) observed during production scaling, confirming the routing layer as a highly viable and robust solution for live enterprise traffic.
 
