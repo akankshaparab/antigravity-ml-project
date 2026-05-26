@@ -20,7 +20,7 @@ This research addresses this gap by investigating the structure of query embeddi
 
 By answering these questions, this study establishes a principled mathematical basis for optimizing vector indices, reducing storage footprints, and constructing high-efficiency query routing layers in enterprise Text-to-SQL systems.
 
-## 2 Prior Research
+## 2 Research Context
 
 ### 2.1 Related Work
 
